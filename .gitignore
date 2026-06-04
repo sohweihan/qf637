@@ -1,3 +1,6 @@
 .env
 __pycache__
 *.parquet
+.ipynb_checkpoints/
+.claude/
+outputs/
