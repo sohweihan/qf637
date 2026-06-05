@@ -50,6 +50,7 @@ Brent (`BZ=F`) is the binding start-date constraint — data available from 2007
 | 07 | `07_OperationalUsefulness.ipynb` | Named episode validation, coverage sweep, baseline comparison |
 | 08 | `08_RiskBookVaRStress.ipynb` | Brent risk book, HS VaR, Kupiec test, stress scenarios |
 | 09 | `09_LeadTimeDashboard.ipynb` | Lead-time tests, false alarm analysis, dashboard export |
+| 10 | `10_Synthesis.ipynb` | Regime interpretation, COVID 2020 case study, current dashboard state, final claim |
 
 ## Alarm Design
 
@@ -140,4 +141,4 @@ nbformat
 
 ## Running the Pipeline
 
-Run notebooks in order from `01_DataExtraction.ipynb` to `09_LeadTimeDashboard.ipynb`. Each notebook reads from `data/processed/` outputs saved by the previous step.
+Run notebooks in order from `01_DataExtraction.ipynb` to `10_Synthesis.ipynb`. Each notebook reads from `data/processed/` outputs saved by the previous step. `10_Synthesis.ipynb` reads from saved outputs only and does not recompute any signals.
