@@ -1,0 +1,4 @@
+event_family,event_count,matched_count,match_rate,avg_lead_days,median_lead_days
+drawdown_event,15,5,0.3333333333333333,12.8,14.0
+portfolio_vol_spike,23,17,0.7391304347826086,9.058823529411764,7.0
+var_breach,198,119,0.601010101010101,8.277310924369749,6.0

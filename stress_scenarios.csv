@@ -1,0 +1,5 @@
+scenario,r_Brent,r_DXY,r_Gold,book_return,book_pnl_on_nav100
+Risk-off growth shock,-0.08,0.02,0.03,-0.08,-8.0
+Geopolitical inflation shock,0.1,0.01,0.04,0.1,10.0
+Liquidity liquidation shock,-0.06,0.03,-0.04,-0.06,-6.0
+Monetary tightening shock,-0.03,0.04,-0.05,-0.03,-3.0
