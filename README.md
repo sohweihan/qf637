@@ -1,371 +1,135 @@
-# Project Setup and Git Workflow Guide
+# Gold Abnormality as a Nowcasting Escalation Dashboard for Commodity Risk Management
 
-This guide explains how to clone the repository, create your own branch, make changes, and push your branch for review.
+QF637 Commodities Risk Management - SMU MQF
 
-Please do **not** push directly to `master` and do **not** merge your own branch into `master`.
+## Overview
 
----
+This project builds a prototype risk dashboard that uses abnormal gold behaviour to nowcast instability in the market environment around a commodity risk book. When gold's return, volatility, residual behaviour, or cross-market relationships become abnormal, the dashboard escalates the book for VaR review and stress testing.
 
-## 1. Clone the Repository
+The project is not framed as a pure prediction model. It does not claim that gold reliably forecasts all future commodity losses. Instead, gold is treated as a real-time cross-market instability indicator that may reveal that the current environment is no longer well represented by trailing risk measures.
 
-Clone the repository to your local machine:
+## Core Research Question
 
-```bash
-git clone <repository-url>
+Can abnormal gold behaviour act as a useful nowcasting signal that prompts timely review of VaR and stress-test exposure in a commodity risk book?
+
+## Implementation Framing
+
+The final implementation separates the signal layer from the valuation layer:
+
+| Layer | Inputs | Output | Purpose |
+|---|---|---|---|
+| Signal layer | Gold futures, Brent futures, DXY, VIX, US10Y | Green / Amber / Red alarm | Detect abnormal cross-market regimes |
+| Benchmark validation layer | Brent futures risk book | VaR, breach, lead-time evidence | Test whether the signal has useful timing |
+| Physical-book implementation layer | Physical assessments, basis, storage, freight, inventory, contracts, hedges | Desk P&L, VaR, ES, stress loss, liquidity impact | Apply the trigger to the actual trading book |
+
+The futures-based Gold/Brent signal is not the physical-book valuation model. It is an external market-regime trigger. When the trigger fires, a production desk would revalue its physical commodity book using its own P&L drivers.
+
+## Scope
+
+- **Alarm asset:** Gold futures (`GC=F`)
+- **Benchmark risk book:** Brent crude futures (`BZ=F`)
+- **Conditioning variables:** DXY (`DX-Y.NYB`), VIX (`^VIX`), US 10Y yield (`^TNX`)
+- **Data:** 2007-07-01 to present via yfinance
+
+Brent futures are used first because they provide a liquid, reproducible benchmark for testing the timing value of the Gold alarm. A physical trading desk would replace the benchmark `R_book` with actual physical-book P&L, including basis, storage, freight, inventory, contract terms, and hedge exposures.
+
+## Notebook Pipeline
+
+| # | Notebook | Purpose |
+|---|---|---|
+| 01 | `01_DataExtraction.ipynb` | Download and save raw price data |
+| 02 | `02_DataCleaning.ipynb` | Strict alignment, log returns, level changes |
+| 03 | `03_DescriptiveEvidence.ipynb` | Fat-tail tests, static vs rolling correlations, reject a simple forecasting claim |
+| 04 | `04_NowcastingValidation.ipynb` | Validate the nowcasting direction against stress proxies and named events |
+| 05 | `05_ConditioningVariableSelection.ipynb` | Test Gold-only versus Gold-plus-conditioning signal variants |
+| 06 | `06_GoldCenteredAlarmDesign.ipynb` | Build the conditioned challenger alarm selected as the default |
+| 07 | `07_OperationalUsefulness.ipynb` | Validate the Gold alarm against named events, coverage, review burden, and naive baselines |
+| 08 | `08_RiskBookVaRStress.ipynb` | Build the Brent futures benchmark book, HS VaR, Kupiec test, and stress scenarios |
+| 09 | `09_LeadTimeDashboard.ipynb` | Test Gold lead time against Brent-book risk events and export dashboard metrics |
+| 10 | `10_BrentBaselineComparison.ipynb` | Compare Gold against a Brent-only alarm as a benchmark/control signal |
+| 11 | `11_BlindSpotAnalysis.ipynb` | Classify events missed by Gold, Brent, both, or neither |
+| 12 | `12_FalseAlarmJustification.ipynb` | Explain Gold false alarms by trigger family and macro relationship driver |
+| 13 | `13_Synthesis.ipynb` | Combine the benchmark comparison, limitations, physical-book implementation design, and final claim |
+
+## Alarm Design
+
+The selected default is the conditioned challenger from Notebook 06. It fires when at least two of three signal families exceed threshold 2.0 on a 252-day shifted trailing z-score baseline:
+
+- **Family 1:** `|gold_return_z| > 2.0` or `gold_vol_z > 2.0` - gold's own return/volatility abnormality
+- **Family 2:** `|gold_residual_z| > 2.0` - gold's OLS residual versus Brent, DXY, VIX, and US10Y
+- **Family 3:** `max(|corr_z|) > 2.0` - instability in gold's rolling 60-day correlations
+
+Dashboard states:
+
+- **Green:** no active signal families, normal monitoring
+- **Amber:** one active family, inspect gold components and relationships
+- **Red:** two or more active families, review VaR calibration and run stress scenarios
+
+## Key Results
+
+### Gold Alarm Validation
+
+| Metric | Value |
+|---|---:|
+| Named stress episodes caught | 9 / 9 |
+| Stress-proxy coverage at default setting | 68.0% |
+| False review rate at default setting | 30.9% |
+| Reviews per year | about 10 |
+| Gold vs random false reviews at 95% coverage | 35.1% vs 47.9% |
+
+### Brent Futures VaR Backtest
+
+| Metric | Value |
+|---|---:|
+| Expected breach rate | 5.00% |
+| Observed breach rate | 5.82% |
+| Kupiec LR statistic | 5.94 |
+| Kupiec p-value | 0.015 |
+| Reject correct coverage at 5%? | Yes |
+
+The Brent futures benchmark confirms that trailing historical-simulation VaR is statistically miscalibrated during regime changes, motivating a cross-market escalation signal.
+
+### Gold Versus Brent-Only Baseline
+
+The Brent-only baseline is useful as a control signal. It confirms commodity stress with fewer false alarms, but it provides little meaningful lead time because Brent often moves when the risk event is already happening.
+
+| Comparison | Interpretation |
+|---|---|
+| Brent-only has fewer false reviews | Brent is cleaner for contemporaneous confirmation |
+| Gold has higher false reviews | Gold watches broader macro/rates/risk-sentiment stress |
+| Gold gives longer lead time | Gold adds early-warning value that Brent-only lacks |
+| Drawdowns remain difficult | Slow cumulative losses are hard for both signals |
+
+## Final Claim
+
+This project does not show that Gold predicts Brent losses directly. It shows that abnormal Gold behaviour can act as a useful cross-market escalation signal. A Brent-only alarm is cleaner and better for contemporaneous confirmation of commodity stress, but it gives little meaningful advance warning because Brent often moves when the risk event is already happening. Gold has a higher false-review burden, but provides materially longer lead time and captures broader macro-regime shifts. In production, the futures-based Gold/Brent signal should therefore trigger review of the physical commodity book, whose actual valuation depends on physical assessments, basis, storage, freight, inventory, contracts, and hedges.
+
+## Known Limitations
+
+- **Drawdowns remain hard:** Gold improves the advance-warning framing relative to Brent-only in some tests, but slow cumulative drawdowns remain the weakest event type.
+- **Isolated Brent shocks:** Many missed events are sharp Brent moves that are themselves the event, leaving little scope for any one-day-ahead warning signal.
+- **False reviews are the cost of broader monitoring:** Gold false alarms often reflect real rates, VIX, DXY, or gold-relationship shifts that do not become Brent-book events within the evaluation window.
+- **Proxy-book status:** Brent futures are a validation proxy, not a complete physical trading book.
+- **In-sample calibration:** Thresholds are calibrated on the full available sample; a production version should add an out-of-sample monitoring period.
+
+## Requirements
+
+```text
+pandas
+numpy
+yfinance
+matplotlib
+seaborn
+scipy
+statsmodels
+nbformat
 ```
 
-Example:
+## Running The Pipeline
 
-```bash
-git clone https://github.com/username/repository-name.git
-```
+Run notebooks in order from `01_DataExtraction.ipynb` to `13_Synthesis.ipynb`. The new benchmark and diagnostic notebooks depend on the dashboard outputs from Notebook 09:
 
-Then move into the project folder:
-
-```bash
-cd repository-name
-```
-
----
-
-## 2. Check Your Current Branch
-
-To see which branch you are currently on:
-
-```bash
-git branch
-```
-
-The branch with the `*` beside it is your current branch.
-
-Example:
-
-```bash
-* master
-```
-
----
-
-## 3. Pull the Latest Version of `master`
-
-Before creating your own branch, make sure your local `master` branch is updated:
-
-```bash
-git checkout master
-git pull origin master
-```
-
-Or, if your Git version uses `switch`:
-
-```bash
-git switch master
-git pull origin master
-```
-
----
-
-## 4. Create a New Branch
-
-Create a new branch for your own work:
-
-```bash
-git checkout -b <your-branch-name>
-```
-
-Example:
-
-```bash
-git checkout -b feature/add-login-page
-```
-
-You can also use:
-
-```bash
-git switch -c <your-branch-name>
-```
-
-Example:
-
-```bash
-git switch -c feature/add-login-page
-```
-
-Recommended branch naming examples:
-
-```bash
-feature/your-feature-name
-fix/your-bug-fix
-update/your-update-name
-```
-
-Examples:
-
-```bash
-feature/add-dashboard
-fix/login-error
-update/readme-instructions
-```
-
----
-
-## 5. Switch Between Branches
-
-To switch to an existing branch:
-
-```bash
-git checkout <branch-name>
-```
-
-Example:
-
-```bash
-git checkout master
-```
-
-Or using the newer command:
-
-```bash
-git switch <branch-name>
-```
-
-Example:
-
-```bash
-git switch feature/add-login-page
-```
-
----
-
-## 6. Check File Changes
-
-To see which files have been changed:
-
-```bash
-git status
-```
-
-This shows:
-- Files that have been modified
-- Files that are not yet tracked by Git
-- Files that are ready to be committed
-
----
-
-## 7. Add Your Changes
-
-To add all changed files:
-
-```bash
-git add .
-```
-
-To add a specific file only:
-
-```bash
-git add <file-name>
-```
-
-Example:
-
-```bash
-git add README.md
-```
-
----
-
-## 8. Commit Your Changes
-
-Commit your changes with a clear message:
-
-```bash
-git commit -m "Describe your changes"
-```
-
-Example:
-
-```bash
-git commit -m "Add login page layout"
-```
-
-Good commit messages should briefly explain what was changed.
-
-Examples:
-
-```bash
-git commit -m "Fix navbar layout issue"
-git commit -m "Add data cleaning script"
-git commit -m "Update project documentation"
-```
-
----
-
-## 9. Push Your Branch
-
-Push your branch to the remote repository:
-
-```bash
-git push origin <your-branch-name>
-```
-
-Example:
-
-```bash
-git push origin feature/add-login-page
-```
-
-After pushing, your branch will be available on GitHub/GitLab.
-
----
-
-## 10. Create a Pull Request
-
-After pushing your branch:
-
-1. Go to the repository on GitHub/GitLab.
-2. Open a Pull Request or Merge Request.
-3. Select your branch as the source branch.
-4. Select `master` as the target branch.
-5. Add a clear title and description of your changes.
-6. Submit the request for review.
-
-Do **not** merge your branch into `master` yourself.
-
-The repository maintainer will review your changes and merge the Pull Request if approved.
-
----
-
-## 11. Updating Your Branch with the Latest `master`
-
-If `master` has been updated and you need the latest changes, you can update your own branch.
-
-First, switch to `master` and pull the latest changes:
-
-```bash
-git checkout master
-git pull origin master
-```
-
-Then switch back to your own branch:
-
-```bash
-git checkout <your-branch-name>
-```
-
-Merge the latest `master` into your branch:
-
-```bash
-git merge master
-```
-
-Example:
-
-```bash
-git checkout master
-git pull origin master
-git checkout feature/add-login-page
-git merge master
-```
-
-If there are conflicts, resolve them before committing and pushing again.
-
-Important: This only updates your own branch with the latest `master`.  
-You should still **not** merge your branch into `master` yourself.
-
----
-
-## Common Git Commands Summary
-
-```bash
-# Clone repository
-git clone <repository-url>
-
-# Move into project folder
-cd <repository-name>
-
-# Check current branch
-git branch
-
-# Switch to master
-git checkout master
-
-# Pull latest master
-git pull origin master
-
-# Create and switch to a new branch
-git checkout -b <branch-name>
-
-# Switch to an existing branch
-git checkout <branch-name>
-
-# Check file changes
-git status
-
-# Add all changes
-git add .
-
-# Add a specific file
-git add <file-name>
-
-# Commit changes
-git commit -m "Your commit message"
-
-# Push your branch
-git push origin <branch-name>
-```
-
----
-
-## Important Rules
-
-Do **not** push directly to `master`.
-
-Do **not** merge your own branch into `master`.
-
-Always create a new branch for your own work.
-
-Use clear and meaningful commit messages.
-
-Push your branch and create a Pull Request for review.
-
-The maintainer will handle the final merge into `master`.
-
----
-
-## Typical Workflow
-
-A typical workflow should look like this:
-
-```bash
-# 1. Clone the repository
-git clone <repository-url>
-
-# 2. Move into the project folder
-cd <repository-name>
-
-# 3. Switch to master
-git checkout master
-
-# 4. Pull the latest master
-git pull origin master
-
-# 5. Create your own branch
-git checkout -b feature/my-new-feature
-
-# 6. Make your changes in the files
-
-# 7. Check changed files
-git status
-
-# 8. Add changes
-git add .
-
-# 9. Commit changes
-git commit -m "Add my new feature"
-
-# 10. Push your branch
-git push origin feature/my-new-feature
-```
-
-After this, create a Pull Request on GitHub/GitLab.
-
-Do **not** merge your own branch into `master`.
+- Notebook 10 reads `outputs/step09_lead_time_dashboard/dashboard_metrics.csv`.
+- Notebook 11 reads Notebook 09 lead-time outputs and Notebook 10 Brent-baseline outputs.
+- Notebook 12 reads Notebook 09 dashboard metrics, the Gold signal components, and the Brent-baseline alarm frame.
+- Notebook 13 summarizes outputs from Notebooks 06-12.
