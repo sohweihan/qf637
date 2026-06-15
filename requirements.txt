@@ -1,0 +1,6 @@
+pandas>=2.2.3
+numpy>=2.1.3
+scipy>=1.15.3
+statsmodels>=0.14.4
+yfinance>=0.2.58
+pyarrow>=19.0.0
