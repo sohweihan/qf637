@@ -9,16 +9,18 @@ from . import data as data_mod
 from . import dashboard as dashboard_mod
 from . import riskbook as riskbook_mod
 from . import signals as signals_mod
+from . import stress as stress_mod
 
 
 def build_all(
     processed_dir: Path | str | None = None,
     trades: list[dict] | None = None,
     refresh: bool = False,
+    stress_loss_limit_usd: float | None = None,
 ) -> dict:
     """Build every helper output and return them in a dict.
 
-    Keys: prices, market_vars, signal_components, alarm_frame, book, dashboard_metrics.
+    Keys: prices, market_vars, signal_components, alarm_frame, book, dashboard_metrics, stress_results.
 
     Args:
         processed_dir: directory containing/receiving the processed parquet files
@@ -40,6 +42,12 @@ def build_all(
     alarm_frame = alarm_mod.build_gold_alarm_frame(signal_components)
     book = riskbook_mod.build_brent_book(trades, prices)
     dashboard_metrics = dashboard_mod.build_dashboard_metrics(book, alarm_frame)
+    stress_results = stress_mod.run_stress_scenarios(book, prices, loss_limit_usd=stress_loss_limit_usd)
+    reverse_stress = (
+        stress_mod.reverse_stress_to_loss_limit(book, stress_loss_limit_usd)
+        if stress_loss_limit_usd is not None
+        else None
+    )
 
     return {
         "prices": prices,
@@ -48,4 +56,6 @@ def build_all(
         "alarm_frame": alarm_frame,
         "book": book,
         "dashboard_metrics": dashboard_metrics,
+        "stress_results": stress_results,
+        "reverse_stress": reverse_stress,
     }

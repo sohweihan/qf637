@@ -18,6 +18,7 @@ def main() -> None:
     alarm_frame = results["alarm_frame"]
     book = results["book"]
     dashboard = results["dashboard_metrics"]
+    stress = results["stress_results"]
 
     print("market_vars:", market_vars.shape, "|", market_vars.index.min().date(), "->", market_vars.index.max().date())
     print("dashboard_metrics:", dashboard.shape)
@@ -41,6 +42,17 @@ def main() -> None:
     print("  nav:", book.loc[latest_date, "nav"])
     print("  drawdown:", book.loc[latest_date, "drawdown"])
     print("  realized_vol_20d:", book.loc[latest_date, "realized_vol_20d"])
+
+    worst = stress.loc[stress["stress_pnl_usd"].idxmin()]
+    print("\nWorst stress scenario:")
+    print(
+        "  {} | shock {} | pnl_usd {:,.2f} | nav_after {:.2f}".format(
+            worst["scenario_name"],
+            f"{worst['shock_pct']:.2%}",
+            worst["stress_pnl_usd"],
+            worst["nav_after_stress"],
+        )
+    )
 
     print("\nTrade blotter:")
     blotter = riskbook_mod.trade_blotter(None, results["prices"])
