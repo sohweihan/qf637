@@ -6,7 +6,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import yfinance as yf
 
 ROOT = Path(__file__).resolve().parent.parent
 PROCESSED_DIR = ROOT / "data" / "processed"
@@ -50,6 +49,8 @@ def extract_price_panel(raw: pd.DataFrame, price_field: str = PRICE_FIELD) -> pd
 
 def download_prices(start: str = START_DATE, end: str | None = None) -> pd.DataFrame:
     """Download the panel of asset close prices from yfinance."""
+    import yfinance as yf
+
     raw = yf.download(
         tickers=list(TICKERS.values()),
         start=start,

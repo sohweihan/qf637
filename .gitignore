@@ -1,7 +1,17 @@
+# Environment
 .env
-__pycache__
-*.parquet
+
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Notebook artifacts
 .ipynb_checkpoints/
-.claude/
+
+# Generated data and analysis outputs
+*.parquet
 outputs/
+
+# Local tool artifacts
+.claude/
 docs/superpowers/

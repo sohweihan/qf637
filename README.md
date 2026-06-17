@@ -37,19 +37,19 @@ Brent futures are used first because they provide a liquid, reproducible benchma
 
 | # | Notebook | Purpose |
 |---|---|---|
-| 01 | `01_DataExtraction.ipynb` | Download and save raw price data |
-| 02 | `02_DataCleaning.ipynb` | Strict alignment, log returns, level changes |
-| 03 | `03_DescriptiveEvidence.ipynb` | Fat-tail tests, static vs rolling correlations, reject a simple forecasting claim |
-| 04 | `04_NowcastingValidation.ipynb` | Validate the nowcasting direction against stress proxies and named events |
-| 05 | `05_ConditioningVariableSelection.ipynb` | Test Gold-only versus Gold-plus-conditioning signal variants |
-| 06 | `06_GoldCenteredAlarmDesign.ipynb` | Build the conditioned challenger alarm selected as the default |
-| 07 | `07_OperationalUsefulness.ipynb` | Validate the Gold alarm against named events, coverage, review burden, and naive baselines |
-| 08 | `08_RiskBookVaRStress.ipynb` | Build the Brent futures benchmark book, HS VaR, Kupiec test, and stress scenarios |
-| 09 | `09_LeadTimeDashboard.ipynb` | Test Gold lead time against Brent-book risk events and export dashboard metrics |
-| 10 | `10_BrentBaselineComparison.ipynb` | Compare Gold against a Brent-only alarm as a benchmark/control signal |
-| 11 | `11_BlindSpotAnalysis.ipynb` | Classify events missed by Gold, Brent, both, or neither |
-| 12 | `12_FalseAlarmJustification.ipynb` | Explain Gold false alarms by trigger family and macro relationship driver |
-| 13 | `13_Synthesis.ipynb` | Combine the benchmark comparison, limitations, physical-book implementation design, and final claim |
+| 01 | `notebooks/01_DataExtraction.ipynb` | Download and save raw price data |
+| 02 | `notebooks/02_DataCleaning.ipynb` | Strict alignment, log returns, level changes |
+| 03 | `notebooks/03_DescriptiveEvidence.ipynb` | Fat-tail tests, static vs rolling correlations, reject a simple forecasting claim |
+| 04 | `notebooks/04_NowcastingValidation.ipynb` | Validate the nowcasting direction against stress proxies and named events |
+| 05 | `notebooks/05_ConditioningVariableSelection.ipynb` | Test Gold-only versus Gold-plus-conditioning signal variants |
+| 06 | `notebooks/06_GoldCenteredAlarmDesign.ipynb` | Build the conditioned challenger alarm selected as the default |
+| 07 | `notebooks/07_OperationalUsefulness.ipynb` | Validate the Gold alarm against named events, coverage, review burden, and naive baselines |
+| 08 | `notebooks/08_RiskBookVaRStress.ipynb` | Build the Brent futures benchmark book, HS VaR, Kupiec test, and stress scenarios |
+| 09 | `notebooks/09_LeadTimeDashboard.ipynb` | Test Gold lead time against Brent-book risk events and export dashboard metrics |
+| 10 | `notebooks/10_BrentBaselineComparison.ipynb` | Compare Gold against a Brent-only alarm as a benchmark/control signal |
+| 11 | `notebooks/11_BlindSpotAnalysis.ipynb` | Classify events missed by Gold, Brent, both, or neither |
+| 12 | `notebooks/12_FalseAlarmJustification.ipynb` | Explain Gold false alarms by trigger family and macro relationship driver |
+| 13 | `notebooks/13_Synthesis.ipynb` | Combine the benchmark comparison, limitations, physical-book implementation design, and final claim |
 
 ## Alarm Design
 
@@ -127,7 +127,7 @@ nbformat
 
 ## Running The Pipeline
 
-Run notebooks in order from `01_DataExtraction.ipynb` to `13_Synthesis.ipynb`. The new benchmark and diagnostic notebooks depend on the dashboard outputs from Notebook 09:
+Run notebooks in order from `notebooks/01_DataExtraction.ipynb` to `notebooks/13_Synthesis.ipynb`. The notebooks resolve `data/`, `outputs/`, and `helpers/` from the repository root, so they can be launched from either the repo root or the `notebooks/` folder. The new benchmark and diagnostic notebooks depend on the dashboard outputs from Notebook 09:
 
 - Notebook 10 reads `outputs/step09_lead_time_dashboard/dashboard_metrics.csv`.
 - Notebook 11 reads Notebook 09 lead-time outputs and Notebook 10 Brent-baseline outputs.
