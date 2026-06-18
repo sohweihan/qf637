@@ -39,9 +39,16 @@ def run_stress_scenarios(
     prices: pd.DataFrame,
     fixed_shock_pcts: tuple[float, ...] | list[float] | None = DEFAULT_FIXED_SHOCKS,
     loss_limit_usd: float | None = None,
+    initial_margin_per_contract_usd: float | None = None,
+    margin_multiplier: float | None = None,
+    lot_size_bbl: float = 1_000.0,
     as_of: pd.Timestamp | str | None = None,
 ) -> pd.DataFrame:
-    """Apply fixed Brent event shocks to the current book."""
+    """Apply fixed Brent event shocks to the current book.
+
+    Margin stress is optional because the repo does not contain real clearing
+    margin inputs.
+    """
     as_of_ts = _as_of_timestamp(book.index, as_of)
     row = _book_row(book, as_of_ts)
     current_price = float(prices["Brent"].loc[:as_of_ts].iloc[-1])
@@ -65,6 +72,21 @@ def run_stress_scenarios(
     scenarios["stress_return"] = scenarios["stress_pnl_usd"] / abs(exposure_usd) if exposure_usd else np.nan
     scenarios["nav_before_stress"] = nav
     scenarios["nav_after_stress"] = nav * (1 + scenarios["stress_return"])
+    scenarios["net_contracts"] = position_bbl / lot_size_bbl if lot_size_bbl else np.nan
+    scenarios["margin_assumption_used"] = initial_margin_per_contract_usd is not None
+    if initial_margin_per_contract_usd is None:
+        scenarios["base_margin_usd"] = np.nan
+        scenarios["stressed_margin_usd"] = np.nan
+        scenarios["incremental_margin_call_usd"] = np.nan
+    else:
+        multiplier = 1.0 if margin_multiplier is None else margin_multiplier
+        base_margin = abs(scenarios["net_contracts"]) * initial_margin_per_contract_usd
+        scenarios["base_margin_usd"] = base_margin
+        scenarios["stressed_margin_usd"] = base_margin * multiplier
+        scenarios["incremental_margin_call_usd"] = scenarios["stressed_margin_usd"] - base_margin
+    scenarios["cash_need_usd"] = scenarios["stress_pnl_usd"].clip(upper=0).abs() + scenarios[
+        "incremental_margin_call_usd"
+    ].fillna(0.0)
     scenarios["loss_limit_usd"] = loss_limit_usd
     scenarios["breach_flag"] = (
         scenarios["stress_pnl_usd"].le(-loss_limit_usd) if loss_limit_usd is not None else False
@@ -112,6 +134,15 @@ def _demo() -> None:
     out = run_stress_scenarios(book, prices, fixed_shock_pcts=[-0.10, 0.10])
     assert out.loc[out["shock_pct"].eq(-0.10), "stress_pnl_usd"].iloc[0] < 0
     assert out.loc[out["shock_pct"].eq(0.10), "stress_pnl_usd"].iloc[0] > 0
+    assert out["incremental_margin_call_usd"].isna().all()
+    margin = run_stress_scenarios(
+        book,
+        prices,
+        fixed_shock_pcts=[-0.10],
+        initial_margin_per_contract_usd=6_000.0,
+        margin_multiplier=2.0,
+    )
+    assert float(margin["incremental_margin_call_usd"].iloc[0]) == 600.0
     reverse = reverse_stress_to_loss_limit(book, 1_100.0)
     assert round(float(reverse["shock_pct"].iloc[0]), 2) == -0.10
 

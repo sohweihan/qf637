@@ -17,6 +17,8 @@ def build_all(
     trades: list[dict] | None = None,
     refresh: bool = False,
     stress_loss_limit_usd: float | None = None,
+    initial_margin_per_contract_usd: float | None = None,
+    margin_multiplier: float | None = None,
 ) -> dict:
     """Build every helper output and return them in a dict.
 
@@ -42,7 +44,13 @@ def build_all(
     alarm_frame = alarm_mod.build_gold_alarm_frame(signal_components)
     book = riskbook_mod.build_brent_book(trades, prices)
     dashboard_metrics = dashboard_mod.build_dashboard_metrics(book, alarm_frame)
-    stress_results = stress_mod.run_stress_scenarios(book, prices, loss_limit_usd=stress_loss_limit_usd)
+    stress_results = stress_mod.run_stress_scenarios(
+        book,
+        prices,
+        loss_limit_usd=stress_loss_limit_usd,
+        initial_margin_per_contract_usd=initial_margin_per_contract_usd,
+        margin_multiplier=margin_multiplier,
+    )
     reverse_stress = (
         stress_mod.reverse_stress_to_loss_limit(book, stress_loss_limit_usd)
         if stress_loss_limit_usd is not None
