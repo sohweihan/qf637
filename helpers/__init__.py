@@ -6,6 +6,7 @@ Modules:
     alarm      - conditioned gold alarm + dashboard state + event utilities (NB06, NB09)
     var        - historical simulation VaR/ES and Kupiec POF test (NB08)
     riskbook   - Brent-only trade-ledger physical book
+    stress     - fixed Brent event shocks and reverse stress
     dashboard  - dashboard metrics assembly and lead-time/false-alarm tables (NB09)
     pipeline   - build_all(): runs the full chain end to end
 """
