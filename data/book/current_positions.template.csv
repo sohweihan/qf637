@@ -1,0 +1,4 @@
+trade_id,instrument,side,contracts,lot_size_bbl,entry_date,entry_price,description
+BRENT-LONG-01,Brent,long,300,1000,2015-01-02,,Initial long hedge: 300 Brent futures (300,000 bbl)
+BRENT-LONG-02,Brent,long,200,1000,2020-03-02,,Add-on: 200 more Brent futures (200,000 bbl), total 500,000 bbl
+BRENT-REDUCE-01,Brent,short,150,1000,2023-01-03,,Partial unwind: sell 150 Brent futures (150,000 bbl), net down to 350,000 bbl
