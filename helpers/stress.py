@@ -9,6 +9,8 @@ DEFAULT_FIXED_SHOCKS = (-0.30, -0.20, -0.10, -0.05, 0.05, 0.10, 0.20, 0.30)
 
 
 def _as_of_timestamp(index: pd.DatetimeIndex, as_of: pd.Timestamp | str | None) -> pd.Timestamp:
+    if len(index) == 0:
+        raise ValueError("Cannot run stress scenarios on an empty book index.")
     return index[-1] if as_of is None else pd.Timestamp(as_of)
 
 
