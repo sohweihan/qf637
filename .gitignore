@@ -1,5 +1,6 @@
 # Environment
 .env
+.DS_Store
 
 # Python caches
 __pycache__/
