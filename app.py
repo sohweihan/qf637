@@ -1289,7 +1289,7 @@ def render_scenario_workbench(
                     "cash_need_usd": "Cash needed",
                 }
             ),
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
         return
@@ -1426,8 +1426,8 @@ def render_scenario_workbench(
     cash_fig.update_layout(margin=dict(l=52, r=20, t=50, b=42))
 
     chart_left, chart_right = st.columns(2, gap="large")
-    chart_left.plotly_chart(pnl_fig, use_container_width=True, key=f"{key_prefix}_stress_pnl_ladder")
-    chart_right.plotly_chart(cash_fig, use_container_width=True, key=f"{key_prefix}_cash_need_ladder")
+    chart_left.plotly_chart(pnl_fig, width="stretch", key=f"{key_prefix}_stress_pnl_ladder")
+    chart_right.plotly_chart(cash_fig, width="stretch", key=f"{key_prefix}_cash_need_ladder")
 
 
 def build_method_flow_chart() -> go.Figure:
@@ -1627,7 +1627,7 @@ def render_story_intro(context: ProjectContext) -> None:
             """,
             unsafe_allow_html=True,
         )
-        st.plotly_chart(build_method_flow_chart(), use_container_width=True, key="story_method_flow")
+        st.plotly_chart(build_method_flow_chart(), width="stretch", key="story_method_flow")
     with right:
         st.markdown("<div class='section-title'>What the project does not claim</div>", unsafe_allow_html=True)
         st.markdown(
@@ -1642,7 +1642,7 @@ def render_story_intro(context: ProjectContext) -> None:
             """,
             unsafe_allow_html=True,
         )
-        st.plotly_chart(build_layer_chart(), use_container_width=True, key="story_layer_chart")
+        st.plotly_chart(build_layer_chart(), width="stretch", key="story_layer_chart")
 
 
 def render_story_method(context: ProjectContext) -> None:
@@ -1716,7 +1716,7 @@ def render_story_results(context: ProjectContext) -> None:
     )
     top_left, top_right = st.columns([1.0, 1.0], gap="large")
     with top_left:
-        st.plotly_chart(build_headline_bar_chart(), use_container_width=True, key="story_headline_bar")
+        st.plotly_chart(build_headline_bar_chart(), width="stretch", key="story_headline_bar")
     with top_right:
         st.markdown("<div class='section-title'>Headline results</div>", unsafe_allow_html=True)
         st.dataframe(
@@ -1729,7 +1729,7 @@ def render_story_results(context: ProjectContext) -> None:
                     {"Result": "Kupiec p-value", "Value": "0.015"},
                 ]
             ),
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
         st.markdown(
@@ -1756,7 +1756,7 @@ def render_story_comparison(context: ProjectContext) -> None:
     )
     left, right = st.columns([1.0, 1.0], gap="large")
     with left:
-        st.plotly_chart(build_key_takeaway_chart(), use_container_width=True, key="story_key_takeaway")
+        st.plotly_chart(build_key_takeaway_chart(), width="stretch", key="story_key_takeaway")
     with right:
         st.dataframe(
             context.early_warning_comparison.rename(
@@ -1776,7 +1776,7 @@ def render_story_comparison(context: ProjectContext) -> None:
                     "Brent-only avg lead",
                 ]
             ],
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
         st.markdown(
@@ -1803,7 +1803,7 @@ def render_story_limits(context: ProjectContext) -> None:
     )
     left, right = st.columns([1.0, 1.0], gap="large")
     with left:
-        st.plotly_chart(build_blind_spot_chart(context), use_container_width=True, key="story_blind_spot")
+        st.plotly_chart(build_blind_spot_chart(context), width="stretch", key="story_blind_spot")
         st.markdown(
             """
             <div class="card">
@@ -1814,7 +1814,7 @@ def render_story_limits(context: ProjectContext) -> None:
             unsafe_allow_html=True,
         )
     with right:
-        st.plotly_chart(build_false_alarm_driver_chart(context), use_container_width=True, key="story_false_alarm_driver")
+        st.plotly_chart(build_false_alarm_driver_chart(context), width="stretch", key="story_false_alarm_driver")
         st.markdown(
             """
             <div class="card">
@@ -1847,7 +1847,7 @@ def render_story_conclusion(context: ProjectContext) -> None:
         unsafe_allow_html=True,
     )
     st.markdown("<div class='section-title'>Desk workflow implication</div>", unsafe_allow_html=True)
-    st.dataframe(PROJECT_LAYERS, use_container_width=True, hide_index=True)
+    st.dataframe(PROJECT_LAYERS, width="stretch", hide_index=True)
 
 
 def render_overview(context: ProjectContext, as_of: pd.Timestamp, lookback_days: int, show_header: bool = True) -> None:
@@ -1901,8 +1901,8 @@ def render_overview(context: ProjectContext, as_of: pd.Timestamp, lookback_days:
         action_col2.metric("Book NAV", fmt_num(float(latest["nav"]), 2))
         action_col3.metric("Drawdown", fmt_pct(float(latest["drawdown"])))
 
-        st.plotly_chart(build_score_chart(overview_slice), use_container_width=True, key="overview_score_chart")
-        st.plotly_chart(build_state_strip(overview_slice), use_container_width=True, key="overview_state_strip")
+        st.plotly_chart(build_score_chart(overview_slice), width="stretch", key="overview_score_chart")
+        st.plotly_chart(build_state_strip(overview_slice), width="stretch", key="overview_state_strip")
 
     with right:
         st.markdown("<div class='section-title'>What moved this signal?</div>", unsafe_allow_html=True)
@@ -2006,7 +2006,7 @@ def render_signal_monitor(context: ProjectContext, as_of: pd.Timestamp, lookback
     )
     st.plotly_chart(
         build_signal_monitor_chart(data, context.signal_components),
-        use_container_width=True,
+        width="stretch",
         key="signal_monitor_chart",
     )
 
@@ -2014,7 +2014,7 @@ def render_signal_monitor(context: ProjectContext, as_of: pd.Timestamp, lookback
     with lower_left:
         st.plotly_chart(
             build_relationship_chart(data, context.signal_components),
-            use_container_width=True,
+            width="stretch",
             key="signal_relationship_chart",
         )
     with lower_right:
@@ -2044,7 +2044,7 @@ def render_signal_monitor(context: ProjectContext, as_of: pd.Timestamp, lookback
                     {"family": "relationship", "active": int(latest_alarm["relationship_alarm"])},
                 ]
             ),
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
 
@@ -2073,7 +2073,7 @@ def render_risk_and_stress(context: ProjectContext, as_of: pd.Timestamp, lookbac
         "This section ties the signal to action. The dashboard does not stop at saying that Gold looks unusual; "
         "it shows what that means for the Brent proxy risk book, historical-simulation VaR, and scenario losses."
     )
-    st.plotly_chart(build_risk_chart(risk_slice), use_container_width=True, key="risk_chart")
+    st.plotly_chart(build_risk_chart(risk_slice), width="stretch", key="risk_chart")
     stress_table = stress_mod.run_stress_scenarios(context.book, context.prices, as_of=as_of)
     summary_cols = st.columns(4)
     down10 = stress_table.loc[stress_table["shock_pct"].eq(-0.10)]
@@ -2103,7 +2103,7 @@ def render_risk_and_stress(context: ProjectContext, as_of: pd.Timestamp, lookbac
         )[
             ["Scenario", "Brent shock", "Stress PnL", "Stress return", "Stressed NAV", "Cash need", "Breach flag"]
         ],
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
     st.caption(
@@ -2136,7 +2136,7 @@ def render_episode_explorer(context: ProjectContext, show_header: bool = True) -
         "Episode Explorer shows the dashboard as a sequence: first the cross-market signal changes, then the alarm "
         "escalates, and only later do risk-book events such as VaR breaches arrive."
     )
-    st.plotly_chart(chart, use_container_width=True, key=f"episode_chart_{episode_name}")
+    st.plotly_chart(chart, width="stretch", key=f"episode_chart_{episode_name}")
 
     if not episode_summary.empty:
         row = episode_summary.iloc[0]
@@ -2162,7 +2162,7 @@ def render_diagnostics_and_method(context: ProjectContext, show_header: bool = T
 
     top_left, top_right = st.columns([1.0, 1.0], gap="large")
     with top_left:
-        st.plotly_chart(build_baseline_chart(context), use_container_width=True, key="diagnostics_baseline")
+        st.plotly_chart(build_baseline_chart(context), width="stretch", key="diagnostics_baseline")
         st.dataframe(
             context.baseline_overall.rename(
                 columns={
@@ -2172,11 +2172,11 @@ def render_diagnostics_and_method(context: ProjectContext, show_header: bool = T
                     "false_alarm_rate": "False alarm rate",
                 }
             ),
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
     with top_right:
-        st.plotly_chart(build_blind_spot_chart(context), use_container_width=True, key="diagnostics_blind_spot")
+        st.plotly_chart(build_blind_spot_chart(context), width="stretch", key="diagnostics_blind_spot")
         st.dataframe(
             context.blind_spot_summary.rename(
                 columns={
@@ -2188,7 +2188,7 @@ def render_diagnostics_and_method(context: ProjectContext, show_header: bool = T
                     "blind_spot_rate": "Blind-spot rate",
                 }
             ),
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
 
@@ -2196,7 +2196,7 @@ def render_diagnostics_and_method(context: ProjectContext, show_header: bool = T
     with lower_left:
         st.plotly_chart(
             build_false_alarm_driver_chart(context),
-            use_container_width=True,
+            width="stretch",
             key="diagnostics_false_alarm_driver",
         )
         st.dataframe(
@@ -2208,7 +2208,7 @@ def render_diagnostics_and_method(context: ProjectContext, show_header: bool = T
                     "brent_concurrent_rate": "Brent concurrent rate",
                 }
             ),
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
     with lower_right:
@@ -2223,7 +2223,7 @@ def render_diagnostics_and_method(context: ProjectContext, show_header: bool = T
                     "median_lead_days": "Median lead days",
                 }
             ),
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
 
@@ -2338,7 +2338,7 @@ def render_monitor_page(context: ProjectContext, as_of: pd.Timestamp) -> None:
     with right:
         st.plotly_chart(
             build_current_var_distribution_chart(context.dashboard_metrics, as_of),
-            use_container_width=True,
+            width="stretch",
             key="landing_compact_var",
         )
 
@@ -2388,7 +2388,7 @@ def render_static_overview(context: ProjectContext) -> None:
                     {"Field": "Use in dashboard", "Value": "Risk monitoring proxy, not the full physical book"},
                 ]
             ),
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
     with right:
@@ -2470,7 +2470,7 @@ def render_static_overview(context: ProjectContext) -> None:
                     "families": "Saved detail",
                 }
             )
-        st.dataframe(flare_log, use_container_width=True, hide_index=True)
+        st.dataframe(flare_log, width="stretch", hide_index=True)
     else:
         st.info("No flare log is currently available.")
 
@@ -2515,7 +2515,7 @@ def render_static_signal_monitor(context: ProjectContext) -> None:
                 },
             ]
         ),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 
@@ -2556,7 +2556,7 @@ def render_static_risk_and_stress(context: ProjectContext) -> None:
                 "breach_flag": "Breach flag",
             }
         ),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 
@@ -2613,7 +2613,7 @@ def render_static_episode_explorer(context: ProjectContext) -> None:
         )
     st.dataframe(
         context.named_episode_validation[["episode", "first_alarm_date", "alarm_count", "alarm_rate", "max_gold_score"]],
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 
