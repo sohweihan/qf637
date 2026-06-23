@@ -1,0 +1,41 @@
+{
+  "source": "external_csv_import",
+  "design_note": "Imported from a collaborator-provided CSV exported using the project's original yfinance tickers outside the local restricted network.",
+  "input_csv": "/Users/secretfish/Desktop/QF637_Commodity/project/qf637-main/data/market/historical_prices.csv",
+  "column_mapping": {
+    "Gold_Futures": "Gold",
+    "Brent_Crude": "Brent",
+    "DXY": "DXY",
+    "VIX": "VIX",
+    "US_10Y_Yield": "US10Y"
+  },
+  "rows_total": 4780,
+  "rows_core_non_na": 4696,
+  "date_min": "2007-07-02 00:00:00",
+  "date_max": "2026-06-21 00:00:00",
+  "assets": {
+    "Gold": {
+      "source": "external_csv_import",
+      "symbol": "GC=F-derived collaborator export"
+    },
+    "Brent": {
+      "source": "external_csv_import",
+      "symbol": "BZ=F-derived collaborator export"
+    },
+    "DXY": {
+      "source": "external_csv_import",
+      "symbol": "DX-Y.NYB-derived collaborator export"
+    },
+    "VIX": {
+      "source": "external_csv_import",
+      "symbol": "^VIX-derived collaborator export"
+    },
+    "US10Y": {
+      "source": "external_csv_import",
+      "symbol": "^TNX-derived collaborator export"
+    }
+  },
+  "surface_parquet": "/Users/secretfish/Desktop/QF637_Commodity/project/qf637-main/data/market/historical_prices.parquet",
+  "surface_csv": "/Users/secretfish/Desktop/QF637_Commodity/project/qf637-main/data/market/historical_prices.csv",
+  "processed_dir": "/Users/secretfish/Desktop/QF637_Commodity/project/qf637-main/data/processed"
+}

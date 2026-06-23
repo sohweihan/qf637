@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pandas as pd
+
 from . import alarm as alarm_mod
 from . import data as data_mod
-from . import dashboard as dashboard_mod
+from . import dashboard_indicators as dashboard_mod
 from . import riskbook as riskbook_mod
 from . import signals as signals_mod
 from . import stress as stress_mod
@@ -43,19 +45,41 @@ def build_all(
     signal_components = signals_mod.compute_gold_signal_components(market_vars)
     alarm_frame = alarm_mod.build_gold_alarm_frame(signal_components)
     book = riskbook_mod.build_brent_book(trades, prices)
-    dashboard_metrics = dashboard_mod.build_dashboard_metrics(book, alarm_frame)
-    stress_results = stress_mod.run_stress_scenarios(
-        book,
-        prices,
-        loss_limit_usd=stress_loss_limit_usd,
-        initial_margin_per_contract_usd=initial_margin_per_contract_usd,
-        margin_multiplier=margin_multiplier,
-    )
-    reverse_stress = (
-        stress_mod.reverse_stress_to_loss_limit(book, stress_loss_limit_usd)
-        if stress_loss_limit_usd is not None
-        else None
-    )
+    dashboard_metrics = dashboard_mod.build_dashboard_metrics(book, alarm_frame) if not book.empty else book.copy()
+    if book.empty:
+        stress_results = stress_mod.fixed_shocks().assign(
+            as_of=pd.NaT,
+            current_price=float("nan"),
+            stressed_price=float("nan"),
+            position_bbl=float("nan"),
+            exposure_usd=float("nan"),
+            stress_pnl_usd=float("nan"),
+            stress_return=float("nan"),
+            nav_before_stress=float("nan"),
+            nav_after_stress=float("nan"),
+            net_contracts=float("nan"),
+            margin_assumption_used=False,
+            base_margin_usd=float("nan"),
+            stressed_margin_usd=float("nan"),
+            incremental_margin_call_usd=float("nan"),
+            cash_need_usd=float("nan"),
+            loss_limit_usd=stress_loss_limit_usd,
+            breach_flag=False,
+        )
+        reverse_stress = None
+    else:
+        stress_results = stress_mod.run_stress_scenarios(
+            book,
+            prices,
+            loss_limit_usd=stress_loss_limit_usd,
+            initial_margin_per_contract_usd=initial_margin_per_contract_usd,
+            margin_multiplier=margin_multiplier,
+        )
+        reverse_stress = (
+            stress_mod.reverse_stress_to_loss_limit(book, stress_loss_limit_usd)
+            if stress_loss_limit_usd is not None
+            else None
+        )
 
     return {
         "prices": prices,
