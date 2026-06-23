@@ -8,7 +8,7 @@ import pandas as pd
 
 from . import alarm as alarm_mod
 from . import data as data_mod
-from . import dashboard as dashboard_mod
+from . import dashboard_indicators as dashboard_mod
 from . import riskbook as riskbook_mod
 from . import signals as signals_mod
 from . import stress as stress_mod

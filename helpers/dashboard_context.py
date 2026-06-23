@@ -14,11 +14,11 @@ import numpy as np
 import pandas as pd
 
 from helpers import alarm as alarm_mod
-from helpers import dashboard as dashboard_mod
+from helpers import dashboard_indicators as dashboard_mod
 from helpers import pipeline as pipeline_mod
 from helpers import signals as signals_mod
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parent
 BOOK_INPUT_DIR = ROOT / "data" / "book"
 BOOK_INPUT_PATH = BOOK_INPUT_DIR / "current_positions.csv"
 STRICT_FALSE_ALARM_START = pd.Timestamp("2012-01-26")
@@ -118,6 +118,18 @@ def load_project_results(
                 "The dashboard could not build project data automatically. Check your internet connection "
                 "or run the notebooks/helpers pipeline first."
             ) from refresh_exc
+    except Exception as exc:
+        if not refresh:
+            raise
+        try:
+            results = pipeline_mod.build_all(refresh=False, trades=trades)
+            ensure_non_empty_results(results)
+            return results
+        except Exception as local_exc:
+            raise ProjectDataUnavailableError(
+                "Live refresh failed and no usable local processed data could be loaded. "
+                "Run `python -m pip install -r requirements.txt`, then retry refresh."
+            ) from local_exc
 
 
 def ensure_non_empty_results(results: dict[str, Any]) -> None:
@@ -231,7 +243,7 @@ def build_static_context() -> ProjectContext:
 
     This mode does not change any existing repo result files. It surfaces the
     validated project conclusions using values already present in the saved
-    README/notebook outputs.
+    notebook README and notebook outputs.
     """
 
     named_episode_validation = pd.DataFrame(
@@ -420,7 +432,7 @@ def build_static_context() -> ProjectContext:
     timeline_frame, flare_log = build_static_timeline_and_flare_log(named_episode_validation)
     return ProjectContext(
         data_mode="static_notebook",
-        provenance_note="Notebook-derived static mode: built from saved README and notebook result outputs. It preserves your validated conclusions without rewriting primary result files.",
+        provenance_note="Notebook-derived static mode: built from the saved notebook README and notebook result outputs. It preserves your validated conclusions without rewriting primary result files.",
         prices=empty,
         market_vars=empty,
         signal_components=empty,

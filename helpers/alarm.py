@@ -9,8 +9,8 @@ CONDITIONED_Z_THRESHOLD = 2.0
 PRIMARY_SCORE_THRESHOLD = 1.5
 COOLDOWN_DAYS = 5
 
-RED_ACTION = "Run stress tests and review VaR calibration"
-AMBER_ACTION = "Monitor and inspect gold relationship components"
+RED_ACTION = "Review VaR and run stress tests"
+AMBER_ACTION = "Inspect signal drivers"
 GREEN_ACTION = "Normal monitoring"
 
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -15,7 +15,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import streamlit as st
 
-from dashboard.analytics import (
+from helpers.dashboard_context import (
     DEFAULT_LEAD_LOOKBACK_DAYS,
     NAMED_EPISODES,
     ProjectContext,
@@ -24,40 +24,74 @@ from dashboard.analytics import (
 )
 from helpers import stress as stress_mod
 from helpers import riskbook as riskbook_mod
+from helpers import var as var_mod
 
-TITLE = "Gold Escalation Dashboard"
-BG = "#0b0a08"
-SURFACE = "#17130c"
-SURFACE_ALT = "#1f1910"
-TEXT = "#f6efdb"
-MUTED = "#bcae8d"
-GOLD = "#d4af37"
-GOLD_LIGHT = "#f0d27a"
-RED = "#d95c4f"
-GREEN = "#69b779"
-AMBER = "#d8a63b"
-BLUE = "#7ba7ff"
+TITLE = "Commodity Risk Monitor"
+MONITOR_LOOKBACK_DAYS = 90
+BG = "#f8f4ea"
+SURFACE = "#ffffff"
+SURFACE_ALT = "#efe7d6"
+TEXT = "#1f1a12"
+MUTED = "#6e624f"
+GOLD = "#a77b00"
+GOLD_LIGHT = "#7b5d00"
+RED = "#bf3f36"
+GREEN = "#2f7d46"
+AMBER = "#a66f00"
+BLUE = "#3166c9"
+PLOT_BG = "rgba(255, 252, 244, 0.96)"
+GRID_COLOR = "rgba(96, 76, 32, 0.16)"
 
-SCENARIO_PRESETS = {
-    "Cross-market liquidation": {
-        "shock_pct": -0.10,
-        "headline": "A broad risk-off move where the flare turns into a selloff across the book.",
+THEMES = {
+    "Light": {
+        "bg": "#f8f4ea",
+        "surface": "#ffffff",
+        "surface_alt": "#efe7d6",
+        "text": "#1f1a12",
+        "muted": "#6e624f",
+        "gold": "#a77b00",
+        "gold_light": "#7b5d00",
+        "red": "#bf3f36",
+        "green": "#2f7d46",
+        "amber": "#a66f00",
+        "blue": "#3166c9",
+        "app_background": "linear-gradient(180deg, #fbf8f0 0%, #f1eadc 100%)",
+        "sidebar_background": "linear-gradient(180deg, #fffdf7 0%, #f0eadc 100%)",
+        "metric_background": "rgba(255, 255, 255, 0.92)",
+        "card_background": "rgba(255, 255, 255, 0.94)",
+        "card_shadow": "0 0 0 1px rgba(31,26,18,0.03) inset",
+        "hero_background": "linear-gradient(135deg, rgba(212,175,55,0.18), rgba(255,255,255,0.96) 42%), rgba(255,255,255,0.96)",
+        "formula_background": "rgba(246, 239, 224, 0.95)",
+        "story_background": "linear-gradient(120deg, rgba(212,175,55,0.13), rgba(255,255,255,0.96) 45%), rgba(255,255,255,0.96)",
+        "border": "rgba(167, 123, 0, 0.22)",
+        "strong_border": "rgba(167, 123, 0, 0.45)",
+        "plot_bg": "rgba(255, 252, 244, 0.96)",
+        "grid_color": "rgba(96, 76, 32, 0.16)",
     },
-    "Rates / macro tightening": {
-        "shock_pct": -0.06,
-        "headline": "A macro tightening follow-through that pressures Brent and the book through weaker risk sentiment.",
-    },
-    "Relationship dislocation": {
-        "shock_pct": -0.04,
-        "headline": "A smaller but still meaningful move where cross-market relationships stay broken after the flare.",
-    },
-    "Geopolitical squeeze": {
-        "shock_pct": 0.08,
-        "headline": "An upside supply-shock path where the same flare resolves into a Brent rally instead of a selloff.",
-    },
-    "Custom shock": {
-        "shock_pct": -0.05,
-        "headline": "Use your own Brent move assumption and watch the book reprice immediately.",
+    "Dark": {
+        "bg": "#0b0a08",
+        "surface": "#17130c",
+        "surface_alt": "#1f1910",
+        "text": "#f6efdb",
+        "muted": "#bcae8d",
+        "gold": "#d4af37",
+        "gold_light": "#f0d27a",
+        "red": "#d95c4f",
+        "green": "#69b779",
+        "amber": "#d8a63b",
+        "blue": "#7ba7ff",
+        "app_background": "radial-gradient(circle at top right, rgba(212, 175, 55, 0.12), transparent 28%), radial-gradient(circle at top left, rgba(123, 167, 255, 0.08), transparent 24%), linear-gradient(180deg, #090806 0%, #0f0d09 100%)",
+        "sidebar_background": "linear-gradient(180deg, #110e08 0%, #0c0b08 100%)",
+        "metric_background": "rgba(23, 19, 12, 0.88)",
+        "card_background": "rgba(23, 19, 12, 0.9)",
+        "card_shadow": "0 0 0 1px rgba(255,255,255,0.02) inset",
+        "hero_background": "linear-gradient(135deg, rgba(212,175,55,0.16), rgba(23,19,12,0.92) 40%), rgba(23, 19, 12, 0.95)",
+        "formula_background": "rgba(31, 25, 16, 0.92)",
+        "story_background": "linear-gradient(120deg, rgba(212,175,55,0.12), rgba(23,19,12,0.94) 45%), rgba(23, 19, 12, 0.94)",
+        "border": "rgba(212, 175, 55, 0.18)",
+        "strong_border": "rgba(212, 175, 55, 0.6)",
+        "plot_bg": "rgba(12, 10, 7, 0.85)",
+        "grid_color": "rgba(255,255,255,0.08)",
     },
 }
 
@@ -101,8 +135,33 @@ PROJECT_LAYERS = pd.DataFrame(
 st.set_page_config(page_title=TITLE, layout="wide", initial_sidebar_state="collapsed")
 
 
-def apply_theme() -> None:
-    """Inject a dark black-gold theme with readable text contrast."""
+def set_theme_colors(theme_name: str) -> dict[str, str]:
+    """Set module-level colors used by CSS and Plotly."""
+
+    palette = THEMES.get(theme_name, THEMES["Light"])
+    global BG, SURFACE, SURFACE_ALT, TEXT, MUTED, GOLD, GOLD_LIGHT, RED, GREEN, AMBER, BLUE
+    global PLOT_BG, GRID_COLOR, STATE_COLORS
+    BG = palette["bg"]
+    SURFACE = palette["surface"]
+    SURFACE_ALT = palette["surface_alt"]
+    TEXT = palette["text"]
+    MUTED = palette["muted"]
+    GOLD = palette["gold"]
+    GOLD_LIGHT = palette["gold_light"]
+    RED = palette["red"]
+    GREEN = palette["green"]
+    AMBER = palette["amber"]
+    BLUE = palette["blue"]
+    PLOT_BG = palette["plot_bg"]
+    GRID_COLOR = palette["grid_color"]
+    STATE_COLORS = {"Green": GREEN, "Amber": AMBER, "Red": RED}
+    return palette
+
+
+def apply_theme(theme_name: str) -> None:
+    """Inject the selected dashboard theme."""
+
+    palette = set_theme_colors(theme_name)
 
     st.markdown(
         f"""
@@ -121,21 +180,30 @@ def apply_theme() -> None:
         }}
 
         .stApp {{
-            background:
-                radial-gradient(circle at top right, rgba(212, 175, 55, 0.12), transparent 28%),
-                radial-gradient(circle at top left, rgba(123, 167, 255, 0.08), transparent 24%),
-                linear-gradient(180deg, #090806 0%, #0f0d09 100%);
+            background: {palette["app_background"]};
             color: var(--text);
         }}
 
         .block-container {{
-            padding-top: 0.8rem;
+            padding-top: 1.1rem;
             padding-bottom: 0.8rem;
         }}
 
+        .top-title {{
+            min-height: 40px;
+            margin-bottom: 0.15rem;
+        }}
+
+        .top-title p {{
+            color: var(--muted);
+            margin: 0;
+            font-size: 0.82rem;
+            line-height: 1.2;
+        }}
+
         [data-testid="stSidebar"] {{
-            background: linear-gradient(180deg, #110e08 0%, #0c0b08 100%);
-            border-right: 1px solid rgba(212, 175, 55, 0.18);
+            background: {palette["sidebar_background"]};
+            border-right: 1px solid {palette["border"]};
         }}
 
         [data-testid="stSidebar"] * {{
@@ -143,8 +211,8 @@ def apply_theme() -> None:
         }}
 
         [data-testid="stMetric"] {{
-            background: rgba(23, 19, 12, 0.88);
-            border: 1px solid rgba(212, 175, 55, 0.16);
+            background: {palette["metric_background"]};
+            border: 1px solid {palette["border"]};
             border-radius: 14px;
             padding: 10px 12px;
         }}
@@ -159,20 +227,18 @@ def apply_theme() -> None:
         }}
 
         .card {{
-            background: rgba(23, 19, 12, 0.9);
-            border: 1px solid rgba(212, 175, 55, 0.18);
+            background: {palette["card_background"]};
+            border: 1px solid {palette["border"]};
             border-radius: 18px;
             padding: 1rem 1rem 0.8rem 1rem;
-            box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset;
+            box-shadow: {palette["card_shadow"]};
         }}
 
         .hero {{
             padding: 1.2rem 1.25rem 1rem 1.25rem;
             border-radius: 20px;
-            background:
-                linear-gradient(135deg, rgba(212,175,55,0.16), rgba(23,19,12,0.92) 40%),
-                rgba(23, 19, 12, 0.95);
-            border: 1px solid rgba(212, 175, 55, 0.24);
+            background: {palette["hero_background"]};
+            border: 1px solid {palette["strong_border"]};
             margin-bottom: 0.8rem;
         }}
 
@@ -214,7 +280,7 @@ def apply_theme() -> None:
 
         .state-red {{
             background: rgba(217, 92, 79, 0.16);
-            color: #ff9f94;
+            color: {RED};
             border: 1px solid rgba(217, 92, 79, 0.34);
         }}
 
@@ -243,7 +309,7 @@ def apply_theme() -> None:
         [data-testid="stDateInput"] label p,
         [data-testid="stCheckbox"] label,
         [data-testid="stCheckbox"] label p {{
-            color: #eadfbe !important;
+            color: var(--text) !important;
             opacity: 1 !important;
             visibility: visible !important;
         }}
@@ -251,8 +317,37 @@ def apply_theme() -> None:
         [data-testid="stNumberInput"] input,
         [data-testid="stTextInput"] input,
         [data-testid="stDateInput"] input,
+        [data-testid="stDateInput"] button,
+        [data-testid="stSelectbox"] div,
+        [data-testid="stMultiSelect"] div,
+        [data-baseweb="base-input"],
+        [data-baseweb="input"],
+        [data-baseweb="select"],
         [data-baseweb="select"] > div,
+        [data-baseweb="popover"] div,
         [data-testid="stSlider"] [role="slider"] {{
+            color: var(--text) !important;
+            background-color: var(--surface) !important;
+        }}
+
+        [data-testid="stNumberInput"] input,
+        [data-testid="stTextInput"] input,
+        [data-testid="stDateInput"] input,
+        [data-baseweb="select"],
+        [data-baseweb="select"] > div {{
+            border-color: {palette["border"]} !important;
+        }}
+
+        [data-testid="stDataFrame"],
+        [data-testid="stTable"],
+        [data-testid="stDataFrame"] div,
+        [data-testid="stTable"] div {{
+            color: var(--text) !important;
+            background-color: var(--surface) !important;
+        }}
+
+        [data-testid="stDataFrame"] button,
+        [data-testid="stTable"] button {{
             color: var(--text) !important;
         }}
 
@@ -261,8 +356,8 @@ def apply_theme() -> None:
         }}
 
         .formula {{
-            background: rgba(31, 25, 16, 0.92);
-            border-left: 3px solid rgba(212, 175, 55, 0.6);
+            background: {palette["formula_background"]};
+            border-left: 3px solid {palette["strong_border"]};
             padding: 0.8rem 0.95rem;
             border-radius: 10px;
             color: var(--text);
@@ -278,10 +373,8 @@ def apply_theme() -> None:
         .story-header {{
             padding: 0.9rem 1rem 0.8rem 1rem;
             border-radius: 16px;
-            background:
-                linear-gradient(120deg, rgba(212,175,55,0.12), rgba(23,19,12,0.94) 45%),
-                rgba(23, 19, 12, 0.94);
-            border: 1px solid rgba(212, 175, 55, 0.18);
+            background: {palette["story_background"]};
+            border: 1px solid {palette["border"]};
             margin-bottom: 0.9rem;
         }}
 
@@ -310,8 +403,8 @@ def apply_theme() -> None:
 
         .takeaway {{
             margin-top: 0.75rem;
-            background: rgba(31, 25, 16, 0.92);
-            border-left: 4px solid rgba(212, 175, 55, 0.65);
+            background: {palette["formula_background"]};
+            border-left: 4px solid {palette["strong_border"]};
             border-radius: 12px;
             padding: 0.8rem 0.95rem;
             color: var(--text);
@@ -321,27 +414,6 @@ def apply_theme() -> None:
             color: var(--gold-light);
         }}
 
-        .compact-header {{
-            padding: 0.8rem 1rem;
-            border-radius: 16px;
-            background: rgba(23, 19, 12, 0.92);
-            border: 1px solid rgba(212, 175, 55, 0.18);
-            margin-bottom: 0.65rem;
-        }}
-
-        .compact-header h2 {{
-            margin: 0;
-            color: var(--gold-light);
-            font-size: 1.35rem;
-            line-height: 1.15;
-        }}
-
-        .compact-header p {{
-            margin: 0.3rem 0 0 0;
-            color: var(--text);
-            font-size: 0.95rem;
-            line-height: 1.45;
-        }}
         </style>
         """,
         unsafe_allow_html=True,
@@ -353,6 +425,27 @@ def load_context(refresh: bool, download_if_missing: bool) -> ProjectContext:
     """Cache the heavy analytics build behind a simple interface."""
 
     return build_project_context(refresh=refresh, download_if_missing=download_if_missing)
+
+
+@st.dialog("Settings")
+def render_settings_dialog() -> None:
+    dark_mode = st.toggle(
+        "Dark mode",
+        value=st.session_state.get("theme_name", "Light") == "Dark",
+    )
+    download_if_missing = st.toggle(
+        "Download data if processed files are missing",
+        value=st.session_state.get("download_if_missing", True),
+    )
+    if download_if_missing != st.session_state.get("download_if_missing", True):
+        st.session_state["download_if_missing"] = download_if_missing
+        st.cache_data.clear()
+        st.rerun()
+
+    next_theme = "Dark" if dark_mode else "Light"
+    if next_theme != st.session_state.get("theme_name", "Light"):
+        st.session_state["theme_name"] = next_theme
+        st.rerun()
 
 
 def render_empty_state(message: str) -> None:
@@ -414,7 +507,7 @@ def render_empty_state(message: str) -> None:
             "1. Run the notebooks or helper pipeline to create data/processed\n"
             "2. Or retry with network access when yfinance rate limits clear\n"
             "3. Then restart:\n"
-            "   streamlit run dashboard/app.py",
+            "   streamlit run app.py",
             language="text",
         )
         st.markdown("<div class='section-title'>Expected inputs</div>", unsafe_allow_html=True)
@@ -464,9 +557,36 @@ def fmt_date(value: pd.Timestamp | None) -> str:
     return pd.Timestamp(value).strftime("%Y-%m-%d")
 
 
+def display_driver_name(name: str | None) -> str:
+    if not name:
+        return "N/A"
+    clean = str(name).replace("gold_corr_", "").replace("_z", "")
+    if "+" in clean:
+        return " + ".join(display_driver_name(part) for part in clean.split("+"))
+    return {
+        "r_Brent": "Brent return",
+        "r_DXY": "DXY return",
+        "d_VIX": "VIX change",
+        "d_US10Y": "US10Y yield change",
+    }.get(clean, clean)
+
+
 def state_badge(state: str) -> str:
     css_class = {"Green": "state-green", "Amber": "state-amber", "Red": "state-red"}.get(state, "state-amber")
     return f"<span class='state-pill {css_class}'>{state}</span>"
+
+
+def status_markdown(status: str) -> str:
+    color = {
+        "Clear": "green",
+        "Green": "green",
+        "Amber": "orange",
+        "Breached": "red",
+        "Red": "red",
+        "No": "green",
+        "Yes": "red",
+    }.get(status, "gray")
+    return f":{color}[**{status}**]"
 
 
 def flare_help_text() -> str:
@@ -607,12 +727,12 @@ def static_selection_context(context: ProjectContext, as_of: pd.Timestamp) -> di
 
 
 def base_layout(fig: go.Figure, title: str | None = None, height: int = 360) -> go.Figure:
-    """Apply a consistent black-gold layout to Plotly figures."""
+    """Apply the selected dashboard layout to Plotly figures."""
 
     fig.update_layout(
         height=height,
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(12, 10, 7, 0.85)",
+        plot_bgcolor=PLOT_BG,
         margin=dict(l=45, r=28, t=56, b=42),
         font=dict(color=TEXT, size=13),
         title=dict(text=title or "", x=0.01, xanchor="left", font=dict(color=GOLD_LIGHT, size=17)),
@@ -629,8 +749,8 @@ def base_layout(fig: go.Figure, title: str | None = None, height: int = 360) -> 
     )
     fig.update_xaxes(showgrid=False, zeroline=False, color=MUTED)
     fig.update_yaxes(
-        gridcolor="rgba(255,255,255,0.08)",
-        zerolinecolor="rgba(255,255,255,0.08)",
+        gridcolor=GRID_COLOR,
+        zerolinecolor=GRID_COLOR,
         color=MUTED,
     )
     return fig
@@ -727,7 +847,7 @@ def build_relationship_chart(data: pd.DataFrame, signal_components: pd.DataFrame
             go.Scatter(
                 x=data.index,
                 y=signal_components.loc[data.index, col],
-                name=col.replace("gold_corr_", "").replace("_z", ""),
+                name=display_driver_name(col),
                 line=dict(color=palette[idx % len(palette)], width=1.8),
             )
         )
@@ -744,7 +864,7 @@ def build_risk_chart(data: pd.DataFrame) -> go.Figure:
         col=1,
     )
     fig.add_trace(
-        go.Scatter(x=data.index, y=data["hs_var_return"], name="HS VaR", line=dict(color=RED, dash="dash")),
+        go.Scatter(x=data.index, y=data["hs_var_return"], name="Historical VaR", line=dict(color=RED, dash="dash")),
         row=1,
         col=1,
     )
@@ -818,7 +938,7 @@ def build_compact_indicator_chart(data: pd.DataFrame, signal_components: pd.Data
         go.Bar(
             x=data.index,
             y=data["conditioned_alarm_score"],
-            name="Alarm score",
+            name="Signal count",
             marker=dict(color=GOLD),
             opacity=0.85,
         ),
@@ -842,7 +962,7 @@ def build_compact_var_chart(data: pd.DataFrame) -> go.Figure:
         col=1,
     )
     fig.add_trace(
-        go.Scatter(x=data.index, y=data["hs_var_return"], name="HS VaR", line=dict(color=RED, dash="dash", width=2)),
+        go.Scatter(x=data.index, y=data["hs_var_return"], name="Historical VaR", line=dict(color=RED, dash="dash", width=2)),
         row=1,
         col=1,
     )
@@ -860,6 +980,55 @@ def build_compact_var_chart(data: pd.DataFrame) -> go.Figure:
     fig.update_yaxes(title_text="NAV / DD", row=2, col=1, tickformat=".0%")
     fig = base_layout(fig, "VaR", height=270)
     fig.update_layout(margin=dict(l=42, r=20, t=48, b=32), legend=dict(font=dict(size=11)))
+    return fig
+
+
+def build_current_var_distribution_chart(metrics: pd.DataFrame, as_of: pd.Timestamp) -> go.Figure:
+    hist = metrics.loc[:as_of, "R_book"].shift(1).dropna().tail(var_mod.VAR_WINDOW)
+    latest = metrics.loc[as_of]
+    var_cutoff = float(latest["hs_var_return"])
+    current_return = float(latest["R_book"])
+    es_cutoff = float(latest["hs_es_return"]) if pd.notna(latest["hs_es_return"]) else np.nan
+
+    fig = go.Figure()
+    if hist.empty:
+        fig.add_annotation(text="No historical VaR window available", showarrow=False)
+        return base_layout(fig, "Today's Historical VaR", height=520)
+
+    fig.add_trace(
+        go.Histogram(
+            x=hist,
+            nbinsx=30,
+            marker=dict(color=BLUE, line=dict(color=SURFACE, width=1)),
+            name=f"Prior {len(hist)} book returns",
+        )
+    )
+    if np.isfinite(var_cutoff):
+        fig.add_vline(
+            x=var_cutoff,
+            line_dash="dash",
+            line_color=RED,
+            annotation_text=f"Historical VaR {fmt_pct(var_cutoff)}",
+            annotation_position="top left",
+        )
+    if np.isfinite(es_cutoff):
+        fig.add_vline(
+            x=es_cutoff,
+            line_dash="dot",
+            line_color=AMBER,
+            annotation_text=f"Expected Shortfall {fmt_pct(es_cutoff)}",
+            annotation_position="top left",
+        )
+    fig.add_vline(
+        x=current_return,
+        line_color=GOLD,
+        annotation_text=f"Today {fmt_pct(current_return)}",
+        annotation_position="top right",
+    )
+    fig.update_xaxes(title_text="Daily book return", tickformat=".1%")
+    fig.update_yaxes(title_text="Historical days")
+    fig = base_layout(fig, "Today's Historical VaR", height=520)
+    fig.update_layout(bargap=0.05, margin=dict(l=42, r=20, t=54, b=42))
     return fig
 
 
@@ -900,7 +1069,7 @@ def build_event_study_chart(
         go.Bar(
             x=alarm_slice.index,
             y=alarm_slice["conditioned_alarm_score"],
-            name="Alarm score",
+            name="Signal count",
             marker=dict(color=GOLD),
         ),
         row=2,
@@ -913,7 +1082,7 @@ def build_event_study_chart(
         col=1,
     )
     fig.add_trace(
-        go.Scatter(x=risk_slice.index, y=risk_slice["hs_var_return"], name="HS VaR", line=dict(color=RED, dash="dash")),
+        go.Scatter(x=risk_slice.index, y=risk_slice["hs_var_return"], name="Historical VaR", line=dict(color=RED, dash="dash")),
         row=3,
         col=1,
     )
@@ -962,6 +1131,7 @@ def build_baseline_chart(context: ProjectContext) -> go.Figure:
 
 def build_false_alarm_driver_chart(context: ProjectContext) -> go.Figure:
     drivers = context.relationship_driver_counts.copy()
+    drivers["relationship_drivers"] = drivers["relationship_drivers"].map(display_driver_name)
     fig = go.Figure(
         data=[
             go.Bar(
@@ -1066,7 +1236,7 @@ def build_timeline_summary_chart(context: ProjectContext, selected_date: pd.Time
             go.Scatter(
                 x=timeline.index,
                 y=timeline["conditioned_alarm_score"],
-                name="Alarm score",
+                name="Signal count",
                 line=dict(color=GOLD, width=2),
                 fill="tozeroy",
                 fillcolor="rgba(212,175,55,0.10)",
@@ -1098,38 +1268,25 @@ def build_timeline_summary_chart(context: ProjectContext, selected_date: pd.Time
     return base_layout(fig, "Book Timeline", height=300 if context.data_mode == "live" else 240)
 
 
-def build_stress_summary_card(summary: dict[str, object], scenario_label: str, scenario_note: str) -> str:
-    return f"""
-        <div class="card">
-            <strong>Scenario selected:</strong> {scenario_label}<br/><br/>
-            {scenario_note}<br/><br/>
-            <strong>Stress PnL:</strong> {fmt_num(summary.get('stress_pnl_usd'), 0)} USD<br/>
-            <strong>Stressed NAV:</strong> {fmt_num(summary.get('nav_after_stress'), 2)}<br/>
-            <strong>MTM-style change:</strong> {fmt_num(summary.get('mtm_style_change_usd'), 0)} USD<br/>
-            <strong>Cash need:</strong> {fmt_num(summary.get('cash_need_usd'), 0)} USD
-        </div>
-    """
-
-
 def render_scenario_workbench(
     context: ProjectContext,
     as_of: pd.Timestamp,
     key_prefix: str,
     title: str,
     intro: str,
-    default_loss_limit: float = 5_000_000.0,
 ) -> None:
     if context.data_mode != "live":
-        st.markdown(intro)
+        if intro:
+            st.markdown(intro)
         st.dataframe(
             context.stress_results.rename(
                 columns={
                     "scenario_name": "Scenario",
-                    "shock_pct": "Brent shock",
-                    "stress_pnl_usd": "Stress PnL",
+                    "shock_pct": "Brent shock %",
+                    "stress_pnl_usd": "Stress P&L",
                     "stress_return": "Stress return",
-                    "nav_after_stress": "Stressed NAV",
-                    "cash_need_usd": "Cash need",
+                    "nav_after_stress": "Post-stress NAV",
+                    "cash_need_usd": "Cash needed",
                 }
             ),
             use_container_width=True,
@@ -1137,61 +1294,47 @@ def render_scenario_workbench(
         )
         return
 
-    st.markdown("<div class='section-title'>" + title + "</div>", unsafe_allow_html=True)
-    st.markdown(intro)
+    latest_book = context.book.loc[as_of]
+    default_loss_limit = abs(float(latest_book["exposure_usd"])) * 0.10
 
-    ctrl_top_left, ctrl_top_mid, ctrl_top_right = st.columns([1.1, 1.0, 1.0], gap="large")
-    preset_name = ctrl_top_left.selectbox(
-        "Event scenario",
-        options=list(SCENARIO_PRESETS.keys()),
-        index=0,
-        key=f"{key_prefix}_preset_name",
-    )
-    preset = SCENARIO_PRESETS[preset_name]
-    shock_default = float(preset["shock_pct"])
-    shock_value = ctrl_top_mid.slider(
-        "Brent move under this event",
-        min_value=-0.30,
-        max_value=0.30,
-        value=float(shock_default),
-        step=0.01,
-        format="%.2f",
+    ctrl1, ctrl2, ctrl3, ctrl4 = st.columns(4, gap="medium")
+    shock_pct = ctrl1.slider(
+        "Brent shock",
+        min_value=-100,
+        max_value=100,
+        value=-10,
+        step=5,
+        format="%d%%",
         key=f"{key_prefix}_shock_pct",
-    )
-    loss_limit = ctrl_top_right.number_input(
-        "Loss limit for reverse-stress flag (USD)",
+    ) / 100
+    loss_limit = ctrl2.number_input(
+        "Loss limit USD",
         min_value=0.0,
         value=default_loss_limit,
         step=500_000.0,
         key=f"{key_prefix}_loss_limit",
     )
-
-    ctrl_low_left, ctrl_low_mid, ctrl_low_right = st.columns([1.0, 1.0, 1.0], gap="large")
-    initial_margin = ctrl_low_left.number_input(
-        "Initial margin per Brent contract (USD, optional)",
+    initial_margin = ctrl3.number_input(
+        "Initial margin / contract",
         min_value=0.0,
         value=0.0,
         step=500.0,
         key=f"{key_prefix}_initial_margin",
     )
-    margin_multiplier = ctrl_low_mid.slider(
-        "Stressed margin multiplier",
+    margin_multiplier = ctrl4.slider(
+        "Margin multiplier",
         min_value=1.0,
         max_value=3.0,
         value=1.5,
         step=0.1,
+        disabled=initial_margin <= 0,
         key=f"{key_prefix}_margin_multiplier",
-    )
-    show_full_pack = ctrl_low_right.checkbox(
-        "Also show standard scenario pack",
-        value=True,
-        key=f"{key_prefix}_show_full_pack",
     )
 
     custom_table = stress_mod.run_stress_scenarios(
         context.book,
         context.prices,
-        fixed_shock_pcts=[float(shock_value)],
+        fixed_shock_pcts=[float(shock_pct)],
         loss_limit_usd=loss_limit if loss_limit > 0 else None,
         initial_margin_per_contract_usd=initial_margin if initial_margin > 0 else None,
         margin_multiplier=margin_multiplier if initial_margin > 0 else None,
@@ -1204,87 +1347,87 @@ def render_scenario_workbench(
         "nav_after_stress": float(custom_row["nav_after_stress"]),
         "mtm_style_change_usd": mtm_style_change_usd,
         "cash_need_usd": float(custom_row["cash_need_usd"]),
+        "incremental_margin_call_usd": float(custom_row["incremental_margin_call_usd"])
+        if pd.notna(custom_row["incremental_margin_call_usd"])
+        else 0.0,
         "stress_return": float(custom_row["stress_return"]),
     }
 
-    metric_cols = st.columns(4)
-    metric_cols[0].metric("Stress PnL", fmt_num(summary["stress_pnl_usd"], 0))
-    metric_cols[1].metric("Stressed NAV", fmt_num(summary["nav_after_stress"], 2))
-    metric_cols[2].metric("MTM-style change", fmt_num(summary["mtm_style_change_usd"], 0))
-    metric_cols[3].metric("Cash need", fmt_num(summary["cash_need_usd"], 0))
+    metric_cols = st.columns(5)
+    metric_items = [
+        ("Stress P&L", fmt_num(summary["stress_pnl_usd"], 0)),
+        ("Post-stress NAV", fmt_num(summary["nav_after_stress"], 2)),
+        ("Margin call", fmt_num(summary["incremental_margin_call_usd"], 0)),
+        ("Cash needed", fmt_num(summary["cash_need_usd"], 0)),
+        ("Limit breached", "Yes" if bool(custom_row["breach_flag"]) else "No"),
+    ]
+    for col, (label, value) in zip(metric_cols, metric_items):
+        with col.container(border=True, height=150):
+            st.caption(label)
+            if label == "Limit breached":
+                st.markdown(f"### {status_markdown(value)}")
+                st.caption(f"Limit: {fmt_num(loss_limit, 0)}")
+            else:
+                st.markdown(f"### {value}")
 
-    detail_left, detail_right = st.columns([1.2, 1.0], gap="large")
-    with detail_left:
-        scenario_frame = custom_table.rename(
-            columns={
-                "scenario_name": "Scenario",
-                "shock_pct": "Brent shock",
-                "stress_pnl_usd": "Stress PnL",
-                "stress_return": "Stress return",
-                "nav_after_stress": "Stressed NAV",
-                "cash_need_usd": "Cash need",
-                "breach_flag": "Breach flag",
-            }
-        )[
-            ["Scenario", "Brent shock", "Stress PnL", "Stress return", "Stressed NAV", "Cash need", "Breach flag"]
-        ]
-        st.dataframe(scenario_frame, use_container_width=True, hide_index=True)
-    with detail_right:
-        st.markdown(
-            build_stress_summary_card(
-                summary,
-                scenario_label=preset_name,
-                scenario_note=str(preset["headline"]),
+    ladder_shocks = [round(value / 100, 2) for value in range(-100, 105, 5)]
+    full_pack = stress_mod.run_stress_scenarios(
+        context.book,
+        context.prices,
+        fixed_shock_pcts=ladder_shocks,
+        loss_limit_usd=loss_limit if loss_limit > 0 else None,
+        initial_margin_per_contract_usd=initial_margin if initial_margin > 0 else None,
+        margin_multiplier=margin_multiplier if initial_margin > 0 else None,
+        as_of=as_of,
+    )
+    shock_axis = full_pack["shock_pct"]
+    pnl_colors = [
+        GOLD if np.isclose(shock, shock_pct) else (RED if value < 0 else GREEN)
+        for shock, value in zip(full_pack["shock_pct"], full_pack["stress_pnl_usd"])
+    ]
+    selected_bars = [bool(np.isclose(shock, shock_pct)) for shock in full_pack["shock_pct"]]
+    cash_colors = [BLUE if selected else AMBER for selected in selected_bars]
+    pnl_fig = go.Figure()
+    pnl_fig.add_trace(
+        go.Bar(
+            x=shock_axis,
+            y=full_pack["stress_pnl_usd"],
+            width=0.04,
+            marker=dict(
+                color=pnl_colors,
+                line=dict(color=[TEXT if selected else color for selected, color in zip(selected_bars, pnl_colors)], width=[2 if selected else 0 for selected in selected_bars]),
             ),
-            unsafe_allow_html=True,
+            name="Stress P&L",
+            hovertemplate="Brent shock %{x:.0%}<br>Stress P&L %{y:,.0f}<extra></extra>",
         )
+    )
+    pnl_fig.update_yaxes(title_text="P&L USD")
+    pnl_fig.update_xaxes(title_text="Brent shock", tickformat=".0%", dtick=0.25)
+    pnl_fig = base_layout(pnl_fig, "Stress P&L Ladder", height=420)
+    pnl_fig.update_layout(margin=dict(l=52, r=20, t=50, b=42))
 
-        reverse = stress_mod.reverse_stress_to_loss_limit(
-            context.book,
-            loss_limit_usd=loss_limit if loss_limit > 0 else 0.0,
-            as_of=as_of,
+    cash_fig = go.Figure()
+    cash_fig.add_trace(
+        go.Bar(
+            x=shock_axis,
+            y=full_pack["cash_need_usd"],
+            width=0.04,
+            marker=dict(
+                color=cash_colors,
+                line=dict(color=[TEXT if selected else AMBER for selected in selected_bars], width=[2 if selected else 0 for selected in selected_bars]),
+            ),
+            name="Cash needed",
+            hovertemplate="Brent shock %{x:.0%}<br>Cash needed %{y:,.0f}<extra></extra>",
         )
-        reverse_row = reverse.iloc[0]
-        st.markdown(
-            f"""
-            <div class="card">
-                <strong>Reverse-stress reading</strong><br/><br/>
-                To lose {fmt_num(loss_limit, 0)} USD from this book on {fmt_date(as_of)},
-                Brent would need to move about <strong>{fmt_pct(reverse_row['shock_pct'])}</strong>.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    )
+    cash_fig.update_yaxes(title_text="Cash USD")
+    cash_fig.update_xaxes(title_text="Brent shock", tickformat=".0%", dtick=0.25)
+    cash_fig = base_layout(cash_fig, "Cash Need Ladder", height=420)
+    cash_fig.update_layout(margin=dict(l=52, r=20, t=50, b=42))
 
-    if show_full_pack:
-        full_pack = stress_mod.run_stress_scenarios(
-            context.book,
-            context.prices,
-            loss_limit_usd=loss_limit if loss_limit > 0 else None,
-            initial_margin_per_contract_usd=initial_margin if initial_margin > 0 else None,
-            margin_multiplier=margin_multiplier if initial_margin > 0 else None,
-            as_of=as_of,
-        )
-        st.caption(
-            "The selected event scenario above reprices the book immediately. The standard scenario pack below stays visible so you can compare that event against the broader stress policy set."
-        )
-        st.dataframe(
-            full_pack.rename(
-                columns={
-                    "scenario_name": "Scenario",
-                    "shock_pct": "Brent shock",
-                    "stress_pnl_usd": "Stress PnL",
-                    "stress_return": "Stress return",
-                    "nav_after_stress": "Stressed NAV",
-                    "cash_need_usd": "Cash need",
-                    "breach_flag": "Breach flag",
-                }
-            )[
-                ["Scenario", "Brent shock", "Stress PnL", "Stress return", "Stressed NAV", "Cash need", "Breach flag"]
-            ],
-            use_container_width=True,
-            hide_index=True,
-        )
+    chart_left, chart_right = st.columns(2, gap="large")
+    chart_left.plotly_chart(pnl_fig, use_container_width=True, key=f"{key_prefix}_stress_pnl_ladder")
+    chart_right.plotly_chart(cash_fig, use_container_width=True, key=f"{key_prefix}_cash_need_ladder")
 
 
 def build_method_flow_chart() -> go.Figure:
@@ -1484,7 +1627,7 @@ def render_story_intro(context: ProjectContext) -> None:
             """,
             unsafe_allow_html=True,
         )
-        st.plotly_chart(build_method_flow_chart(), use_container_width=True)
+        st.plotly_chart(build_method_flow_chart(), use_container_width=True, key="story_method_flow")
     with right:
         st.markdown("<div class='section-title'>What the project does not claim</div>", unsafe_allow_html=True)
         st.markdown(
@@ -1499,7 +1642,7 @@ def render_story_intro(context: ProjectContext) -> None:
             """,
             unsafe_allow_html=True,
         )
-        st.plotly_chart(build_layer_chart(), use_container_width=True)
+        st.plotly_chart(build_layer_chart(), use_container_width=True, key="story_layer_chart")
 
 
 def render_story_method(context: ProjectContext) -> None:
@@ -1573,7 +1716,7 @@ def render_story_results(context: ProjectContext) -> None:
     )
     top_left, top_right = st.columns([1.0, 1.0], gap="large")
     with top_left:
-        st.plotly_chart(build_headline_bar_chart(), use_container_width=True)
+        st.plotly_chart(build_headline_bar_chart(), use_container_width=True, key="story_headline_bar")
     with top_right:
         st.markdown("<div class='section-title'>Headline results</div>", unsafe_allow_html=True)
         st.dataframe(
@@ -1613,7 +1756,7 @@ def render_story_comparison(context: ProjectContext) -> None:
     )
     left, right = st.columns([1.0, 1.0], gap="large")
     with left:
-        st.plotly_chart(build_key_takeaway_chart(), use_container_width=True)
+        st.plotly_chart(build_key_takeaway_chart(), use_container_width=True, key="story_key_takeaway")
     with right:
         st.dataframe(
             context.early_warning_comparison.rename(
@@ -1660,7 +1803,7 @@ def render_story_limits(context: ProjectContext) -> None:
     )
     left, right = st.columns([1.0, 1.0], gap="large")
     with left:
-        st.plotly_chart(build_blind_spot_chart(context), use_container_width=True)
+        st.plotly_chart(build_blind_spot_chart(context), use_container_width=True, key="story_blind_spot")
         st.markdown(
             """
             <div class="card">
@@ -1671,7 +1814,7 @@ def render_story_limits(context: ProjectContext) -> None:
             unsafe_allow_html=True,
         )
     with right:
-        st.plotly_chart(build_false_alarm_driver_chart(context), use_container_width=True)
+        st.plotly_chart(build_false_alarm_driver_chart(context), use_container_width=True, key="story_false_alarm_driver")
         st.markdown(
             """
             <div class="card">
@@ -1749,7 +1892,7 @@ def render_overview(context: ProjectContext, as_of: pd.Timestamp, lookback_days:
         st.markdown("<div class='section-title'>Action-first status</div>", unsafe_allow_html=True)
         card_col1, card_col2, card_col3, card_col4 = st.columns(4)
         card_col1.metric("Dashboard state", latest_alarm["dashboard_state"])
-        card_col2.metric("Alarm score", int(latest_alarm["conditioned_alarm_score"]))
+        card_col2.metric("Signal count", int(latest_alarm["conditioned_alarm_score"]))
         card_col3.metric("Active families", active_families_text)
         card_col4.metric("As of", fmt_date(as_of))
 
@@ -1758,14 +1901,14 @@ def render_overview(context: ProjectContext, as_of: pd.Timestamp, lookback_days:
         action_col2.metric("Book NAV", fmt_num(float(latest["nav"]), 2))
         action_col3.metric("Drawdown", fmt_pct(float(latest["drawdown"])))
 
-        st.plotly_chart(build_score_chart(overview_slice), use_container_width=True)
-        st.plotly_chart(build_state_strip(overview_slice), use_container_width=True)
+        st.plotly_chart(build_score_chart(overview_slice), use_container_width=True, key="overview_score_chart")
+        st.plotly_chart(build_state_strip(overview_slice), use_container_width=True, key="overview_state_strip")
 
     with right:
         st.markdown("<div class='section-title'>What moved this signal?</div>", unsafe_allow_html=True)
         corr_cols = [col for col in context.signal_components.columns if col.startswith("gold_corr_")]
         strongest = signal_row[corr_cols].abs().idxmax()
-        strongest_name = strongest.replace("gold_corr_", "").replace("_z", "")
+        strongest_name = display_driver_name(strongest)
 
         st.markdown(
             f"""
@@ -1773,8 +1916,8 @@ def render_overview(context: ProjectContext, as_of: pd.Timestamp, lookback_days:
                 <p><strong>Active families:</strong> {active_families_text}</p>
                 <p><strong>Strongest relationship distortion:</strong> {strongest_name}</p>
                 <p><strong>Relationship z-score:</strong> {fmt_num(float(signal_row[strongest]), 2)}</p>
-                <p><strong>Current HS VaR (return):</strong> {fmt_pct(float(latest["hs_var_return"]))}</p>
-                <p><strong>Current HS ES (return):</strong> {fmt_pct(float(latest["hs_es_return"]))}</p>
+                <p><strong>Current Historical VaR (return):</strong> {fmt_pct(float(latest["hs_var_return"]))}</p>
+                <p><strong>Current Historical ES (return):</strong> {fmt_pct(float(latest["hs_es_return"]))}</p>
             </div>
             """,
             unsafe_allow_html=True,
@@ -1854,7 +1997,7 @@ def render_signal_monitor(context: ProjectContext, as_of: pd.Timestamp, lookback
         """
         <div class="card">
             <strong>How to read these charts</strong><br/><br/>
-            The top panel shows the book's NAV over the selected lookback window. The lower panel shows the conditioned alarm score.
+            The top panel shows the book's NAV over the selected lookback window. The lower panel shows the signal count.
             The orange/red dotted threshold at <strong>2</strong> is the escalation threshold:
             when the score reaches 2 or more, at least two signal families are active and the dashboard turns <strong>Red</strong>.
         </div>
@@ -1864,11 +2007,16 @@ def render_signal_monitor(context: ProjectContext, as_of: pd.Timestamp, lookback
     st.plotly_chart(
         build_signal_monitor_chart(data, context.signal_components),
         use_container_width=True,
+        key="signal_monitor_chart",
     )
 
     lower_left, lower_right = st.columns([1.1, 0.9], gap="large")
     with lower_left:
-        st.plotly_chart(build_relationship_chart(data, context.signal_components), use_container_width=True)
+        st.plotly_chart(
+            build_relationship_chart(data, context.signal_components),
+            use_container_width=True,
+            key="signal_relationship_chart",
+        )
     with lower_right:
         latest_alarm = context.alarm_frame.loc[as_of]
         st.markdown("<div class='section-title'>Current model logic</div>", unsafe_allow_html=True)
@@ -1925,7 +2073,7 @@ def render_risk_and_stress(context: ProjectContext, as_of: pd.Timestamp, lookbac
         "This section ties the signal to action. The dashboard does not stop at saying that Gold looks unusual; "
         "it shows what that means for the Brent proxy risk book, historical-simulation VaR, and scenario losses."
     )
-    st.plotly_chart(build_risk_chart(risk_slice), use_container_width=True)
+    st.plotly_chart(build_risk_chart(risk_slice), use_container_width=True, key="risk_chart")
     stress_table = stress_mod.run_stress_scenarios(context.book, context.prices, as_of=as_of)
     summary_cols = st.columns(4)
     down10 = stress_table.loc[stress_table["shock_pct"].eq(-0.10)]
@@ -1988,7 +2136,7 @@ def render_episode_explorer(context: ProjectContext, show_header: bool = True) -
         "Episode Explorer shows the dashboard as a sequence: first the cross-market signal changes, then the alarm "
         "escalates, and only later do risk-book events such as VaR breaches arrive."
     )
-    st.plotly_chart(chart, use_container_width=True)
+    st.plotly_chart(chart, use_container_width=True, key=f"episode_chart_{episode_name}")
 
     if not episode_summary.empty:
         row = episode_summary.iloc[0]
@@ -2014,7 +2162,7 @@ def render_diagnostics_and_method(context: ProjectContext, show_header: bool = T
 
     top_left, top_right = st.columns([1.0, 1.0], gap="large")
     with top_left:
-        st.plotly_chart(build_baseline_chart(context), use_container_width=True)
+        st.plotly_chart(build_baseline_chart(context), use_container_width=True, key="diagnostics_baseline")
         st.dataframe(
             context.baseline_overall.rename(
                 columns={
@@ -2028,7 +2176,7 @@ def render_diagnostics_and_method(context: ProjectContext, show_header: bool = T
             hide_index=True,
         )
     with top_right:
-        st.plotly_chart(build_blind_spot_chart(context), use_container_width=True)
+        st.plotly_chart(build_blind_spot_chart(context), use_container_width=True, key="diagnostics_blind_spot")
         st.dataframe(
             context.blind_spot_summary.rename(
                 columns={
@@ -2046,7 +2194,11 @@ def render_diagnostics_and_method(context: ProjectContext, show_header: bool = T
 
     lower_left, lower_right = st.columns([1.0, 1.0], gap="large")
     with lower_left:
-        st.plotly_chart(build_false_alarm_driver_chart(context), use_container_width=True)
+        st.plotly_chart(
+            build_false_alarm_driver_chart(context),
+            use_container_width=True,
+            key="diagnostics_false_alarm_driver",
+        )
         st.dataframe(
             context.false_alarm_trigger_breakdown.rename(
                 columns={
@@ -2111,7 +2263,7 @@ def render_diagnostics_and_method(context: ProjectContext, show_header: bool = T
     )
 
 
-def render_monitor_page(context: ProjectContext, as_of: pd.Timestamp, lookback_days: int) -> None:
+def render_monitor_page(context: ProjectContext, as_of: pd.Timestamp) -> None:
     """Compact landing page: keep within one screen and focus on signal + VaR."""
 
     if context.data_mode != "live":
@@ -2122,304 +2274,90 @@ def render_monitor_page(context: ProjectContext, as_of: pd.Timestamp, lookback_d
     if pd.isna(reference_as_of):
         reference_as_of = context.dashboard_metrics.index[0]
 
-    selectable_dates = list(context.timeline_frame.index)
-    top_left, top_mid = st.columns([1.0, 1.0], gap="large")
-    with top_left:
-        chosen_date = st.select_slider(
-            "Monitoring date",
-            options=selectable_dates,
-            value=as_of,
-            format_func=lambda x: fmt_date(pd.Timestamp(x)),
-            key="landing_monitoring_date",
-        )
-        as_of = pd.Timestamp(chosen_date)
-    with top_mid:
-        reference_choice = st.select_slider(
-            "Comparison date",
-            options=selectable_dates,
-            value=reference_as_of,
-            format_func=lambda x: fmt_date(pd.Timestamp(x)),
-            key="landing_reference_date",
-        )
-        reference_as_of = pd.Timestamp(reference_choice)
-    st.caption("Page 1 is the landing monitor. Use Page 2 for flare selection and the full stress-test interaction.")
-
-    st.markdown(
-        f"""
-        <div class="compact-header">
-            <h2>Landing Monitor</h2>
-            <p>
-                Read this page as one-screen risk triage: first the Gold & Brent indicators and alarm signal, then the VaR view.
-                Monitoring date: <strong>{fmt_date(as_of)}</strong>. Comparison date: <strong>{fmt_date(reference_as_of)}</strong>.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
     latest = context.dashboard_metrics.loc[as_of]
     latest_alarm = context.alarm_frame.loc[as_of]
     latest_book = context.book.loc[as_of]
     reference = context.dashboard_metrics.loc[reference_as_of]
     reference_alarm = context.alarm_frame.loc[reference_as_of]
-    active_families = [
-        label
-        for label, flag in (
-            ("return/vol", latest_alarm["return_or_vol_alarm"]),
-            ("residual", latest_alarm["residual_alarm"]),
-            ("relationship", latest_alarm["relationship_alarm"]),
-        )
-        if int(flag) == 1
+    signal_row = context.signal_components.loc[as_of]
+    corr_cols = [col for col in context.signal_components.columns if col.startswith("gold_corr_")]
+    strongest = signal_row[corr_cols].abs().idxmax()
+    strongest_name = display_driver_name(strongest)
+
+    metric_cols = st.columns([1.35, 1, 1, 1, 1])
+    with metric_cols[0].container(border=True, height=140):
+        st.caption("Risk state")
+        st.markdown(f"### {status_markdown(str(latest_alarm['dashboard_state']))}")
+        st.caption(str(latest_alarm["recommended_action"]))
+        st.caption(f"vs {fmt_date(reference_as_of)}: {reference_alarm['dashboard_state']}")
+    metric_items = [
+        ("Historical VaR", fmt_pct(float(latest["hs_var_return"])), format_signed_pct(float(latest["hs_var_return"] - reference["hs_var_return"]))),
+        ("Exposure USD", fmt_num(float(latest["exposure_usd"]), 0), ""),
+        ("Drawdown", fmt_pct(float(latest["drawdown"])), ""),
+        ("Book NAV", fmt_num(float(latest_book["nav"]), 2), format_signed_num(float(latest_book["nav"] - context.book.loc[reference_as_of, "nav"]), 2)),
     ]
-    active_family_text = ", ".join(active_families) if active_families else "none"
+    for col, (label, value, delta) in zip(metric_cols[1:], metric_items):
+        with col.container(border=True, height=140):
+            st.caption(label)
+            st.markdown(f"### {value}")
+            if delta:
+                st.caption(delta)
 
-    window_start = as_of - pd.Timedelta(days=min(lookback_days, 120))
-    overview_slice = context.dashboard_metrics.loc[window_start:as_of].copy()
-    if "conditioned_alarm_score" not in overview_slice.columns:
-        overview_slice = overview_slice.join(context.alarm_frame[["conditioned_alarm_score"]], how="left")
+    signal_cards = [
+        (
+            "Gold return / volatility",
+            "Breached" if int(latest_alarm["return_or_vol_alarm"]) else "Clear",
+            f"return z {fmt_num(float(signal_row['gold_return_z']), 2)} / vol z {fmt_num(float(signal_row['gold_vol_z']), 2)}",
+            "|return z| > 2 or vol z > 2",
+        ),
+        (
+            "Gold residual",
+            "Breached" if int(latest_alarm["residual_alarm"]) else "Clear",
+            f"residual z {fmt_num(float(signal_row['gold_residual_z']), 2)}",
+            "|residual z| > 2",
+        ),
+        (
+            "Correlation stress",
+            "Breached" if int(latest_alarm["relationship_alarm"]) else "Clear",
+            f"{strongest_name} z {fmt_num(float(signal_row[strongest]), 2)}",
+            "max |correlation z| > 2",
+        ),
+    ]
 
-    metric_cols = st.columns(4)
-    metric_cols[0].metric("Alarm state", latest_alarm["dashboard_state"], delta=f"vs {fmt_date(reference_as_of)}: {reference_alarm['dashboard_state']}")
-    metric_cols[1].metric("Alarm score", int(latest_alarm["conditioned_alarm_score"]), delta=f"{int(latest_alarm['conditioned_alarm_score'] - reference_alarm['conditioned_alarm_score']):+d}")
-    metric_cols[2].metric("HS VaR", fmt_pct(float(latest["hs_var_return"])), delta=format_signed_pct(float(latest["hs_var_return"] - reference["hs_var_return"])))
-    metric_cols[3].metric("Book NAV", fmt_num(float(latest_book["nav"]), 2), delta=format_signed_num(float(latest_book["nav"] - context.book.loc[reference_as_of, "nav"]), 2))
+    left, right = st.columns([0.9, 1.1], gap="large")
+    with left:
+        st.markdown("<div class='section-title'>Signal Checks</div>", unsafe_allow_html=True)
+        for title, status, current, trigger in signal_cards:
+            with st.container(border=True):
+                card_cols = st.columns([1.2, 0.8])
+                card_cols[0].markdown(f"**{title}**")
+                card_cols[1].markdown(status_markdown(status))
+                st.write(current)
+                st.caption(trigger)
 
-    signal_col, alarm_col = st.columns([1.65, 0.95], gap="large")
-    with signal_col:
+    with right:
         st.plotly_chart(
-            build_compact_indicator_chart(overview_slice, context.signal_components),
+            build_current_var_distribution_chart(context.dashboard_metrics, as_of),
             use_container_width=True,
-        )
-    with alarm_col:
-        st.markdown(
-            f"""
-            <div class="card">
-                <strong>Alarm signal</strong><br/><br/>
-                Current state: <strong>{latest_alarm["dashboard_state"]}</strong><br/>
-                Active families: <strong>{active_family_text}</strong><br/>
-                Alarm score: <strong>{int(latest_alarm["conditioned_alarm_score"])}</strong><br/><br/>
-                Recommended action: <strong>{latest_alarm["recommended_action"]}</strong><br/><br/>
-                This block reacts to the <strong>monitoring date</strong>. Stress assumptions belong on <strong>Page 2</strong>.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f"""
-            <div class="card">
-                <strong>Comparison read</strong><br/><br/>
-                Versus <strong>{fmt_date(reference_as_of)}</strong>, drawdown moved to <strong>{fmt_pct(float(latest["drawdown"]))}</strong>
-                from <strong>{fmt_pct(float(reference["drawdown"]))}</strong>.<br/><br/>
-                Use this page to decide whether the current state deserves stress drilldown.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    st.plotly_chart(
-        build_compact_var_chart(overview_slice),
-        use_container_width=True,
-    )
-    var_note_left, var_note_right = st.columns([1.0, 1.0], gap="medium")
-    with var_note_left:
-        st.markdown(
-            f"""
-            <div class="card">
-                <strong>VaR read</strong><br/><br/>
-                HS VaR is <strong>{fmt_pct(float(latest["hs_var_return"]))}</strong> and HS ES is <strong>{fmt_pct(float(latest["hs_es_return"]))}</strong>.
-                Book return, NAV, and drawdown update with the selected monitoring date.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with var_note_right:
-        st.markdown(
-            f"""
-            <div class="card">
-                <strong>Next step</strong><br/><br/>
-                If this state looks worrying, open <strong>Page 2</strong>, choose the Red-alarm episode start you want to anchor,
-                and test how PnL, stressed NAV, MTM-style change, and cash need react under the event.
-            </div>
-            """,
-            unsafe_allow_html=True,
+            key="landing_compact_var",
         )
 
 
-def render_validation_page(context: ProjectContext) -> None:
-    """Stress-test page: selected flare plus full interactive stress workbench."""
+def render_operational_stress_page(context: ProjectContext, as_of: pd.Timestamp) -> None:
+    """Stress the current book for today's risk view."""
 
-    render_page_header(
-        title="Stress Test",
-        subtitle=(
-            "This page is the dedicated stress-testing workspace: choose the flare to anchor the event date, adjust parameters, and inspect the book revaluation immediately."
-        ),
-        takeaway=(
-            "Page 1 tells you whether the state is worrying. Page 2 tells you what happens to the book under the event you want to test."
-        ),
-    )
-    st.markdown(
-        """
-        <div class="card">
-            This page is intentionally separate from the landing page. The left-side choice is the event anchor; the main body is the interactive stress-test area.
-            A <strong>flare</strong> means the <strong>start date of a Red-alarm episode</strong>, not every red day inside that same run.
-        </div>
-        """,
-        unsafe_allow_html=True,
+    if context.data_mode != "live":
+        render_static_risk_and_stress(context)
+        return
+
+    render_scenario_workbench(
+        context=context,
+        as_of=as_of,
+        key_prefix="current_book",
+        title="Current book stress",
+        intro="",
     )
 
-    st.markdown("<div class='section-title'>Selected Flare</div>", unsafe_allow_html=True)
-    flare_log = context.flare_log.copy()
-    if context.data_mode == "live":
-        if flare_log.empty:
-            st.info("No flares are currently available in the live alarm frame.")
-        else:
-            flare_options = list(flare_log["flare_date"])
-            default_flare = st.session_state.get("selected_flare_date")
-            if default_flare not in flare_options:
-                default_flare = flare_options[-1]
-            flare_date = st.selectbox(
-                "Red-alarm episode start",
-                options=flare_options,
-                index=flare_options.index(default_flare),
-                format_func=lambda x: flare_label(pd.Timestamp(x), flare_log.loc[flare_log["flare_date"] == x].iloc[0]),
-                key="drilldown_flare_pick_live",
-                help=flare_help_text(),
-            )
-            st.session_state["selected_flare_date"] = pd.Timestamp(flare_date)
-            flare_row = flare_log.loc[flare_log["flare_date"] == flare_date].iloc[0]
-            alarm_row = context.alarm_frame.loc[pd.Timestamp(flare_date)]
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Episode start", fmt_date(pd.Timestamp(flare_date)))
-            c2.metric("State", flare_row["dashboard_state"])
-            c3.metric("Score", int(flare_row["conditioned_alarm_score"]))
-            c4.metric("Families", flare_row["families"])
-
-            state_cols = st.columns(4)
-            state_cols[0].metric("NAV at flare", fmt_num(flare_row["nav"], 2))
-            state_cols[1].metric("Drawdown at flare", fmt_pct(flare_row["drawdown"]))
-            state_cols[2].metric("HS VaR at flare", fmt_pct(flare_row["hs_var_return"]))
-            state_cols[3].metric(
-                "Episode length",
-                f"{int(flare_row['flare_trading_days'])} trading day(s)" if pd.notna(flare_row["flare_trading_days"]) else "N/A",
-            )
-
-            action_col1, action_col2 = st.columns([1.2, 1.0], gap="large")
-            with action_col1:
-                st.markdown(
-                    f"""
-                    <div class="card">
-                        <strong>Stress-test anchor</strong><br/><br/>
-                        This record is the <strong>start</strong> of one Red-alarm episode. The dashboard turned Red on
-                        <strong>{fmt_date(pd.Timestamp(flare_date))}</strong> because the active families were
-                        <strong>{flare_row['families']}</strong>. Use this date as the event anchor for the stress scenarios below.
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-            with action_col2:
-                st.markdown(
-                    f"""
-                    <div class="card">
-                        <strong>Book state at event start</strong><br/><br/>
-                        NAV: <strong>{fmt_num(flare_row["nav"], 2)}</strong><br/>
-                        Drawdown: <strong>{fmt_pct(flare_row["drawdown"])}</strong><br/>
-                        HS VaR: <strong>{fmt_pct(flare_row["hs_var_return"])}</strong><br/><br/>
-                        Recommended action: <strong>{alarm_row["recommended_action"]}</strong><br/><br/>
-                        {alarm_row["recommended_action"]}<br/><br/>
-                        <strong>Episode end:</strong> {fmt_date(flare_row.get("flare_end_date"))}
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-            render_scenario_workbench(
-                context=context,
-                as_of=pd.Timestamp(flare_date),
-                key_prefix="drilldown_page",
-                title="Event response workbench",
-                intro=(
-                    "Use the controls below as a flare response area. Start from the selected Red-alarm episode, then vary the event path and watch "
-                    "stress PnL, stressed NAV, MTM-style change, and cash need update immediately."
-                ),
-            )
-
-            st.markdown("<div class='section-title'>Response Interpretation</div>", unsafe_allow_html=True)
-            st.markdown(
-                f"""
-                <div class="card">
-                    <strong>What this flare means</strong><br/><br/>
-                    The flare is the start point of a Red-alarm episode, not a random red day. It is classified as
-                    <strong>{flare_row['dashboard_state']}</strong> with families <strong>{flare_row['families']}</strong>.
-                    The relevant question is not whether the flare is statistically interesting, but whether the book's
-                    state at the start of that episode justifies a fuller risk review.
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-    else:
-        episode_options = list(context.named_episode_validation["episode"])
-        default_episode = st.session_state.get("selected_flare_episode")
-        if default_episode not in episode_options:
-            default_episode = episode_options[0]
-        episode_name = st.selectbox(
-            "Named flare / episode",
-            options=episode_options,
-            index=episode_options.index(default_episode),
-            key="drilldown_flare_pick_static",
-            help=flare_help_text(),
-        )
-        st.session_state["selected_flare_episode"] = episode_name
-        row = context.named_episode_validation.loc[context.named_episode_validation["episode"] == episode_name].iloc[0]
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Episode", episode_name)
-        c2.metric("First alarm", fmt_date(row["first_alarm_date"]))
-        c3.metric("Alarm count", int(row["alarm_count"]))
-        c4.metric("Alarm rate", fmt_pct(float(row["alarm_rate"])))
-
-        st.markdown("<div class='section-title'>Why This Flare Matters</div>", unsafe_allow_html=True)
-        st.markdown(
-            f"""
-            <div class="card">
-                {EPISODE_STORIES.get(episode_name, 'This episode is used as a flare-level validation example.')}<br/><br/>
-                In static mode, this page shows the saved flare-level interpretation plus the standard scenario pack,
-                rather than reconstructing the full day-level mark-to-market path.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        render_scenario_workbench(
-            context=context,
-            as_of=pd.Timestamp(row["first_alarm_date"]) if pd.notna(row["first_alarm_date"]) else pd.Timestamp(context.overview_metrics["latest_date"]),
-            key_prefix="drilldown_page_static",
-            title="Event response workbench",
-            intro=(
-                "Static mode keeps the same event-driven framing: choose a flare-level validation episode, then inspect the saved stress translations as the response layer."
-            ),
-        )
-
-        st.markdown("<div class='section-title'>Response Interpretation</div>", unsafe_allow_html=True)
-        st.markdown(
-            f"""
-            <div class="card">
-                <strong>Operational reading</strong><br/><br/>
-                The dashboard saved this episode because it is a good flare-level example of a regime change worth
-                stress review. Use the scenario pack to ask: if the book had been escalated at the first alarm, how
-                severe would the stress translation have looked?
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with st.expander("Project Context And Validation Evidence"):
-        render_story_intro(context)
-        render_story_method(context)
-        render_story_results(context)
-        render_story_comparison(context)
-        render_story_limits(context)
-        render_story_conclusion(context)
-        render_episode_explorer(context, show_header=False)
-        render_diagnostics_and_method(context, show_header=False)
 
 
 def render_static_overview(context: ProjectContext) -> None:
@@ -2430,7 +2368,7 @@ def render_static_overview(context: ProjectContext) -> None:
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Mode", "Latest snapshot")
     c2.metric("Displayed state", str(selected["state"]))
-    c3.metric("Alarm score", str(selected["score"]))
+    c3.metric("Signal count", str(selected["score"]))
     c4.metric("As of", fmt_date(pd.Timestamp(selected["selected_date"])))
 
     c5, c6, c7 = st.columns(3)
@@ -2459,17 +2397,17 @@ def render_static_overview(context: ProjectContext) -> None:
             f"""
             <div class="card">
                 <p><strong>Selection note:</strong> {selected['note']}</p>
-                <p><strong>Strongest relationship distortion:</strong> {selected['strongest_relationship']}</p>
+                <p><strong>Strongest relationship distortion:</strong> {display_driver_name(selected['strongest_relationship'])}</p>
                 <p><strong>Relationship z-score:</strong> {fmt_num(selected['relationship_z'], 2)}</p>
-                <p><strong>HS VaR:</strong> {fmt_pct(selected['var_return'])}</p>
-                <p><strong>HS ES:</strong> {fmt_pct(selected['es_return'])}</p>
+                <p><strong>Historical VaR:</strong> {fmt_pct(selected['var_return'])}</p>
+                <p><strong>Historical ES:</strong> {fmt_pct(selected['es_return'])}</p>
                 <p><strong>Mode note:</strong> This summary is notebook-derived, not re-downloaded from the market-data API.</p>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-    st.markdown("<div class='section-title'>Red-Alarm Episode Log</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>Breach Episode Log</div>", unsafe_allow_html=True)
     st.markdown(
         f"""
         <div class="card">
@@ -2520,7 +2458,7 @@ def render_static_overview(context: ProjectContext) -> None:
                     "families": "Families",
                     "nav": "NAV",
                     "drawdown": "Drawdown",
-                    "hs_var_return": "HS VaR",
+                    "hs_var_return": "Historical VaR",
                 }
             )
         else:
@@ -2681,13 +2619,17 @@ def render_static_episode_explorer(context: ProjectContext) -> None:
 
 
 def main() -> None:
-    apply_theme()
-    top_ctrl_left, top_ctrl_mid, top_ctrl_right = st.columns([1.0, 1.0, 1.4], gap="large")
-    auto_download = top_ctrl_left.checkbox("Download data if processed files are missing", value=True)
-    if top_ctrl_mid.button("Refresh live market data"):
-        st.cache_data.clear()
-        st.session_state["force_refresh"] = True
-
+    theme_name = st.session_state.setdefault("theme_name", "Light")
+    apply_theme(theme_name)
+    st.markdown(
+        f"""
+        <div class="top-title">
+            <p></p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    auto_download = st.session_state.setdefault("download_if_missing", True)
     refresh_requested = bool(st.session_state.pop("force_refresh", False))
 
     try:
@@ -2700,22 +2642,30 @@ def main() -> None:
     if context.data_mode == "live":
         dates = context.dashboard_metrics.index.sort_values()
         default_as_of = dates[-1]
-        as_of = top_ctrl_right.date_input(
+        date_col, refresh_col, settings_col, _toolbar_space = st.columns([1.0, 1.0, 0.65, 1.6], gap="large")
+        as_of = date_col.date_input(
             "As-of date",
             value=default_as_of.date(),
             min_value=dates[0].date(),
             max_value=default_as_of.date(),
         )
+        if refresh_col.button("Refresh live market data"):
+            st.cache_data.clear()
+            st.session_state["force_refresh"] = True
+            st.rerun()
+        if settings_col.button("Settings"):
+            render_settings_dialog()
         as_of_ts = context.dashboard_metrics.index.asof(pd.Timestamp(as_of))
-        lookback_days = st.slider("Lookback window (days)", min_value=60, max_value=540, value=180, step=30)
     else:
         default_as_of = pd.Timestamp(context.overview_metrics["latest_date"])
-        focus_col1, focus_col2, focus_col3 = st.columns([1.0, 1.0, 1.1], gap="large")
+        focus_col1, focus_col2, settings_col, focus_col3 = st.columns([1.0, 1.0, 0.65, 1.1], gap="large")
         focus_mode = focus_col1.selectbox(
             "Static focus",
             options=["Latest snapshot", "Named episode", "Custom date"],
             index=0,
         )
+        if settings_col.button("Settings"):
+            render_settings_dialog()
         st.session_state["static_focus_mode"] = focus_mode
 
         if focus_mode == "Latest snapshot":
@@ -2742,19 +2692,18 @@ def main() -> None:
             focus_col3.caption("Custom dates use static snapshot/episode mapping if a saved summary exists.")
 
         st.session_state["static_as_of_date"] = str(static_as_of)
-        top_ctrl_right.caption(
+        st.caption(
             "Static notebook mode uses saved project outputs. It supports latest snapshot, named episodes, and custom-date mapping."
         )
         as_of_ts = pd.Timestamp(static_as_of)
-        lookback_days = 180
-        top_ctrl_right.metric("Static reference date", fmt_date(pd.Timestamp(static_as_of)))
+        st.metric("Static reference date", fmt_date(pd.Timestamp(static_as_of)))
 
-    tab_monitor, tab_validation = st.tabs(["Landing Monitor", "Stress Test"])
+    tab_monitor, tab_validation = st.tabs(["Monitor", "Stress Test"])
 
     with tab_monitor:
-        render_monitor_page(context, as_of_ts, lookback_days)
+        render_monitor_page(context, as_of_ts)
     with tab_validation:
-        render_validation_page(context)
+        render_operational_stress_page(context, as_of_ts)
 
 
 if __name__ == "__main__":

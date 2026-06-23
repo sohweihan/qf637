@@ -7,6 +7,7 @@ Modules:
     var        - historical simulation VaR/ES and Kupiec POF test (NB08)
     riskbook   - Brent-only trade-ledger physical book
     stress     - fixed Brent event shocks and reverse stress
-    dashboard  - dashboard metrics assembly and lead-time/false-alarm tables (NB09)
+    dashboard_indicators - dashboard metrics and lead-time/false-alarm tables (NB09)
+    dashboard_context    - app-ready dashboard context and static fallback data
     pipeline   - build_all(): runs the full chain end to end
 """
